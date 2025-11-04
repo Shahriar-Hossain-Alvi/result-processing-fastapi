@@ -1,10 +1,8 @@
+# this project is using python 3.12 interpreter
 from fastapi import FastAPI
 import uvicorn
 
-
 app = FastAPI()
-
-# install asyncpg
 
 
 
