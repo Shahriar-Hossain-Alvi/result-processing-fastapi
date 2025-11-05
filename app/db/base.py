@@ -4,4 +4,5 @@ from sqlalchemy.orm import DeclarativeBase
 class Base(DeclarativeBase):
     pass
 
-from app.models import Department
+# import models here so that alembic can find them
+from app.models import Department, Semester
