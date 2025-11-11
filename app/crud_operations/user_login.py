@@ -29,4 +29,4 @@ async def login_user(
     return {
         "access_token": access_token,
         "token_type": "bearer"
-    }
+    } # this token will be stored in the frontend and will be sent to backend for authentication with protected routes
