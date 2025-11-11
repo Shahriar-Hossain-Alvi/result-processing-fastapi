@@ -45,8 +45,8 @@ class User(Base):
 
     # relationship with student
     student: Mapped["Student"] = relationship(back_populates="user", uselist=False) #type: ignore 
-
-    #TODO: add relationship with teacher?
-
     # normally sqlalchemy thinks the relationship is 1-N or N-1 so it creates a list using uselist=True
     # but we want 1-1 so we use uselist=False
+
+    # relationship with subject offerings
+    subject_offerings: Mapped[list["SubjectOfferings"]] = relationship(back_populates="taught_by") # type: ignore

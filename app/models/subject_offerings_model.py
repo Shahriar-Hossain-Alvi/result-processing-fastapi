@@ -8,6 +8,11 @@ class SubjectOfferings(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
+    # relationship with user(teacher)
+    taught_by_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+
+    taught_by: Mapped["User"] = relationship(back_populates="subject_offerings") #type: ignore 
+
     # relationship with subject
     subject_id: Mapped[int] = mapped_column(Integer, ForeignKey("subjects.id", ondelete="CASCADE"))
 
