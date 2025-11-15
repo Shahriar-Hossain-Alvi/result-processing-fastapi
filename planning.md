@@ -1,7 +1,7 @@
 ## Tables
 1. users = id, username, email, hashed_password, is_active, role ✅
 2. Department = id, dept_name ✅
-3. semester = id, semester_name, semester_number
+3. semester = id, semester_name, semester_number ✅
 4. students = id, name, registration, session, department_id, semester_id
 5. subject = id, subject_title, subject_code, semester_id, credits
 6. marks = id, student_id, subject_id, semester_id, assignmet_mark, midterm_mark, final_mark, class_test_mark, GPA, total_mark grade(GPA), user_id(teacher_id/Admin_id)
