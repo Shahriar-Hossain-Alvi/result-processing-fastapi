@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.core.authenticated_user import get_current_user
-from app.services.department_service import create_department, delete_department, get_department, get_departments, update_department
+from app.services.department_service import DepartmentService
 from app.models.user_model import UserRole
 from app.schemas.department_schema import DepartmentCreateSchema, DepartmentOutSchema, DepartmentUpdateSchema
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +26,7 @@ async def create_new_department(
         raise HTTPException(status_code=403, detail="Only admin can create a new department")
     print("DEPARTMENT DATA", department_data)
     try:
-       return await create_department(db, department_data)
+       return await DepartmentService.create_department(db, department_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -39,7 +39,7 @@ async def get_all_departments(
     ):
 
     try: 
-        return await get_departments(db)
+        return await DepartmentService.get_departments(db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -53,7 +53,7 @@ async def get_single_department(
     ):
 
     try:
-        return await get_department(db, id)
+        return await DepartmentService.get_department(db, id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -71,7 +71,7 @@ async def update_single_department(
         raise HTTPException(status_code=403, detail="Unauthorized access")
 
     try:
-        return await update_department(db, id, department_data)
+        return await DepartmentService.update_department(db, id, department_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -88,6 +88,6 @@ async def delete_single_department(
         raise HTTPException(status_code=403, detail="Unauthorized access")
 
     try:
-        return await delete_department(db, id)
+        return await DepartmentService.delete_department(db, id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

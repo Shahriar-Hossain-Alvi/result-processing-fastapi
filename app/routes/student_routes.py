@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.authenticated_user import get_current_user
-from app.services.student_service import create_student, delete_student, get_student, get_students, update_student
+from app.services.student_service import StudentService
 from app.db.db import get_db_session
 from app.permissions.role_checks import ensure_admin_or_teacher, ensure_admin
 from app.schemas.student_schema import StudentCreateSchema, StudentOutSchema, StudentUpdateSchema
@@ -21,7 +21,7 @@ async def create_student_record(
 ):
 
     try:
-        return await create_student(db, student_data)
+        return await StudentService.create_student(db, student_data)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -38,7 +38,7 @@ async def get_all_students(
 ):
 
     try:
-        return await get_students(db)
+        return await StudentService.get_students(db)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -52,7 +52,7 @@ async def get_single_student(
     current_user: UserOutSchema = Depends(get_current_user),
 ):
     try:
-        return await get_student(db, id)
+        return await StudentService.get_student(db, id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -70,7 +70,7 @@ async def update_single_student(
 ):
 
     try:
-        return await update_student(db, id, student_data)
+        return await StudentService.update_student(db, id, student_data)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -84,7 +84,7 @@ async def delete_single_student(
 ):
 
     try:
-        return await delete_student(db, id)
+        return await StudentService.delete_student(db, id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

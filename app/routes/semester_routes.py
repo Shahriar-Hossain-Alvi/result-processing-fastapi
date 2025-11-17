@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.authenticated_user import get_current_user
-from app.services.semester_service import create_semester, delete_semester, get_semester, get_semesters, update_semester
+from app.services.semester_service import SemesterService
 from app.db.db import get_db_session
 from app.schemas.semester_schema import SemesterCreateSchema, SemesterOutSchema, SemesterUpdateSchema
 from app.schemas.user_schema import UserOutSchema
@@ -25,7 +25,7 @@ async def add__new_semester(
     
     
     try: 
-        return await create_semester(db, semester_data)
+        return await SemesterService.create_semester(db, semester_data)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
@@ -36,7 +36,7 @@ async def add__new_semester(
 @router.get("/", response_model=list[SemesterOutSchema])
 async def get_all_semesters(db: AsyncSession = Depends(get_db_session)):
     try:
-        return await get_semesters(db)
+        return await SemesterService.get_semesters(db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
@@ -45,7 +45,7 @@ async def get_all_semesters(db: AsyncSession = Depends(get_db_session)):
 @router.get("/{id}", response_model=SemesterOutSchema)
 async def get_single_semester(id: int, db: AsyncSession = Depends(get_db_session)):
     try:
-        return await get_semester(db, id)
+        return await SemesterService.get_semester(db, id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
   
@@ -62,7 +62,7 @@ async def update_single_semester(
         raise HTTPException(status_code=403, detail="Unauthorized access")
 
     try:
-        return await update_semester(db, id, semester_data)
+        return await SemesterService.update_semester(db, id, semester_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -78,6 +78,6 @@ async def delete_single_semester(
         raise HTTPException(status_code=403, detail="Unauthorized access")
     
     try:
-        return await delete_semester(db, id)
+        return await SemesterService.delete_semester(db, id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
