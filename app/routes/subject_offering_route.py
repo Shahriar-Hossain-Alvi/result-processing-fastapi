@@ -51,3 +51,17 @@ async def delete_a_subject_offering(
     db: AsyncSession = Depends(get_db_session)
 ):
     return await SubjectOfferingService.delete_subject_offering(db, subject_offering_id)
+
+
+# TODO: add this subject_offering to db after deploying or creating the frontend
+"""
+Subject Offerings for Tourism 1st Semester
+  {"taught_by_id": 16, "subject_id": 1, "department_id": 6},
+  {"taught_by_id": 17, "subject_id": 2, "department_id": 6},
+  {"taught_by_id": 18, "subject_id": 3, "department_id": 6},
+  {"taught_by_id": 19, "subject_id": 13, "department_id": 6},
+  {"taught_by_id": 16, "subject_id": 14, "department_id": 6},
+  {"taught_by_id": 17, "subject_id": 15, "department_id": 6},
+  {"taught_by_id": 18, "subject_id": 16, "department_id": 6},
+  {"taught_by_id": 19, "subject_id": 17, "department_id": 6}
+"""

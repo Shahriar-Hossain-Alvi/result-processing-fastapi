@@ -18,22 +18,28 @@ class SubjectOfferingService:
         db: AsyncSession
     ):
         # validate teacher id and role
-        teacher = await db.scalar(select(User).where(User.id == sub_off_data.taught_by_id))
+        teacher = await check_existence(User, db, sub_off_data.taught_by_id, "Teacher")
 
-        if not teacher or teacher.role.value != "teacher":
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Teacher not found or not a teacher")
+        # teacher = await db.scalar(select(User).where(User.id == sub_off_data.taught_by_id))
+
+        if teacher.role.value != "teacher":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not a teacher")
 
         # validate department id
-        department = await db.scalar(select(Department).where(Department.id == sub_off_data.department_id))
+        await check_existence(Department, db, sub_off_data.department_id, "Department")
 
-        if not department:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
+        # department = await db.scalar(select(Department).where(Department.id == sub_off_data.department_id))
+
+        # if not department:
+            # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
 
         # validate subject id
-        subject = await db.scalar(select(Subject).where(Subject.id == sub_off_data.subject_id))
+        await check_existence(Subject, db, sub_off_data.subject_id, "Subject")
 
-        if not subject:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
+        # subject = await db.scalar(select(Subject).where(Subject.id == sub_off_data.subject_id))
+
+        # if not subject:
+        #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
         
         offered_subject = SubjectOfferings(
             **sub_off_data.model_dump()

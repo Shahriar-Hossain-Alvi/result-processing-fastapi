@@ -6,10 +6,10 @@ from app.models.student_model import Student
 from app.models.user_model import User
 from app.schemas.student_schema import StudentCreateSchema, StudentUpdateSchema
 from fastapi import HTTPException, status
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload
 
+from app.utils import check_existence
 
-# TODO: create Student Service class
 
 class StudentService:
 
@@ -19,11 +19,7 @@ class StudentService:
             student_data: StudentCreateSchema
     ):
         # check for existing user
-        user = await db.scalar(select(User).where(User.id == student_data.user_id))
-
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="User not found. Cannot create student")
+        user = await check_existence(User, db, student_data.user_id, "User")
 
         if not user.role.value == "student":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
@@ -36,18 +32,11 @@ class StudentService:
             raise ValueError("Student already exist")
 
         # check if department exist
-        department = await db.scalar(select(Department).where(Department.id == student_data.department_id))
+        await check_existence(Department, db, student_data.department_id, "Department")
 
-        if not department:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="Department not found. Student cannot be created")
 
         # check if semester exist
-        semester = await db.scalar(select(Semester).where(Semester.id == student_data.semester_id))
-
-        if not semester:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="Semester not found. Student cannot be created")
+        await check_existence(Semester, db, student_data.semester_id, "Semester")
 
         new_student = Student(**student_data.model_dump())
         db.add(new_student)
@@ -73,8 +62,8 @@ class StudentService:
     ):
 
         stmt = select(Student).where(Student.id == student_id).options(
-                joinedload(Student.user) # Eager load user
-            )
+            joinedload(Student.user)  # Eager load user
+        )
 
         student = await db.scalar(stmt)
 
