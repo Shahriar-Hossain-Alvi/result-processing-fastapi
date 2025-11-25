@@ -4,8 +4,6 @@ from app.models.subject_model import Subject
 from app.schemas.subject_schema import SubjectCreateSchema
 from fastapi import HTTPException, status
 
-# TODO: create Subject Service class
-
 class SubjectService:
 
     @staticmethod
