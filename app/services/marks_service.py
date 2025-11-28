@@ -144,7 +144,7 @@ class MarksService:
         db: AsyncSession,
         student_id: int,
         semester_id: int | None = None,  # for filtering
-        subject_id: int | None = None  # for filtering # TODO: (subject_id) this might not be needed
+        subject_id: int | None = None  # for filtering
     ):
 
         stmt = select(Mark).where(Mark.student_id == student_id)

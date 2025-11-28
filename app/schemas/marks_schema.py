@@ -26,4 +26,9 @@ class MarksResponseSchema(MarksBaseSchema):
     total_mark: float
     GPA: float 
     model_config = ConfigDict(from_attributes=True)
-     
+
+
+class GetAllSubjectsMarksForAStudentResponseSchema(BaseModel):
+    semester_id: int
+    marks: list[MarksResponseSchema]
+    model_config = ConfigDict(from_attributes=True)
