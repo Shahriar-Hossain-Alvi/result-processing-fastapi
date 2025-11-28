@@ -25,7 +25,9 @@ def create_access_token(
     return token
 
 
-def decode_access_token(token: str):
+def decode_access_token(token: str | None) -> Dict[str, Any] | None:
+    if token is None:
+        return None
     
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]) # returns the payload (sub, iat, exp)

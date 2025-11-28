@@ -36,7 +36,7 @@ def permission(*required_roles: AllowedRoles):
                 raise
 
             # 5. Decode the token to get the user information.
-            payload = decode_access_token(token)  # type: ignore
+            payload = decode_access_token(token) 
 
             if payload is None:
                 raise HTTPException(
@@ -90,7 +90,9 @@ def permission(*required_roles: AllowedRoles):
                     )
 
             # 9. Pass the current user to the route function as a keyword argument after authentication and authorization. so that it can be used in the route function
-            kwargs["current_user"] = current_user
+            # kwargs["current_user"] = current_user
+            if "current_user" in func.__code__.co_varnames:
+                kwargs["current_user"] = current_user
 
             # 10. If all checks pass, execute the original route function. This ensures the router code runs after successful validation.
 

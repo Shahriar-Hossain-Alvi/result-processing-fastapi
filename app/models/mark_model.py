@@ -1,10 +1,21 @@
 from app.db.base import Base
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import Integer, String, Float, ForeignKey
+from sqlalchemy import Integer, Float, ForeignKey, UniqueConstraint
 
 
 class Mark(Base):
     __tablename__ = "marks"
+
+    # a student can have only one mark for a subject in a semester
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id", 
+            "subject_id", 
+            "semester_id", 
+            name="unique_mark_record"
+        ),
+    )
+
 
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -19,7 +30,7 @@ class Mark(Base):
 
     total_mark: Mapped[float | None] = mapped_column(Float, default=0.0)
 
-    GPA: Mapped[float | None] = mapped_column(String(5), default=0.0)
+    GPA: Mapped[float | None] = mapped_column(Float, default=0.0)
 
 
     # relationship with student
@@ -38,4 +49,5 @@ class Mark(Base):
     semester_id: Mapped[int] = mapped_column(Integer, ForeignKey("semesters.id", ondelete="CASCADE"))
 
     semester: Mapped["Semester"] = relationship(back_populates="marks") #type: ignore 
+    
     
