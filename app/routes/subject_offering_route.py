@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.authenticated_user import get_current_user
 from app.db.db import get_db_session
-from app.permissions.role_checks import ensure_admin
+from app.permissions.role_checks import ensure_admin, ensure_admin_or_teacher
 from app.schemas.subject_offering_schema import SubjectOfferingCreateSchema, SubjectOfferingResponseSchema, SubjectOfferingUpdateSchema
+from app.schemas.subject_schema import SubjectOutSchema
 from app.schemas.user_schema import UserOutSchema
 from app.services.subject_offering_service import SubjectOfferingService
 
@@ -20,6 +21,18 @@ async def create_new_subject_offering(
 ):
     
     return await SubjectOfferingService.create_subject_offering(sub_off_data, db)
+
+
+# get offered subjects list for marking (Admin=All subjects, Teacher=subjects they teach)
+@router.get("/offered_subjects", dependencies=[Depends(ensure_admin_or_teacher)], 
+            response_model=list[SubjectOutSchema])
+async def get_offered_subjects_for_marking(
+    semester_id: int,
+    department_id: int,
+    current_user: UserOutSchema = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    return await SubjectOfferingService.get_offered_subjects_for_marking(db, semester_id, department_id, current_user)
 
 
 @router.get("/{subject_offering_id}", response_model=SubjectOfferingResponseSchema)
@@ -51,6 +64,8 @@ async def delete_a_subject_offering(
     db: AsyncSession = Depends(get_db_session)
 ):
     return await SubjectOfferingService.delete_subject_offering(db, subject_offering_id)
+
+
 
 
 # TODO: add this subject_offering to db after deploying or creating the frontend
