@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.department_model import Department
 from app.models.subject_model import Subject
@@ -6,6 +6,7 @@ from app.models.subject_offerings_model import SubjectOfferings
 from app.models.user_model import User
 from app.schemas.subject_offering_schema import SubjectOfferingCreateSchema, SubjectOfferingUpdateSchema
 from fastapi import HTTPException, status
+from app.schemas.user_schema import UserOutSchema
 from app.utils import check_existence
 
 
@@ -127,3 +128,35 @@ class SubjectOfferingService:
         return {
             "message": f"Subject offering deleted successfully. ID: {subject_offering.id}"
         }
+    
+    
+
+        
+    # get offered subjects for marking
+    # admin -> see all subjects for marking
+    # teacher -> see only the subjects they teach
+    @staticmethod
+    async def get_offered_subjects_for_marking(
+        db: AsyncSession,
+        semester_id: int,
+        department_id: int,
+        current_user: UserOutSchema
+    ):
+        stmt = select(Subject)\
+            .join(Subject.subject_offerings)\
+            .where(
+                and_(
+                    Subject.semester_id == semester_id,
+                    SubjectOfferings.department_id == department_id
+                )
+            )
+
+        # restrict subject list for teachers
+        if current_user.role.value == "teacher":
+            stmt = stmt.where(
+                SubjectOfferings.taught_by_id == current_user.id
+            )
+
+        result = await db.execute(stmt)
+        subjects = result.scalars().all()
+        return subjects

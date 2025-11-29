@@ -1,8 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from app.models.subject_model import Subject
+from app.models.subject_offerings_model import SubjectOfferings
 from app.schemas.subject_schema import SubjectCreateSchema
 from fastapi import HTTPException, status
+
+from app.schemas.user_schema import UserOutSchema
 
 class SubjectService:
 
@@ -80,3 +83,4 @@ class SubjectService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
 
         return subject
+

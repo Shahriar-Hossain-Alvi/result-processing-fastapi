@@ -1,4 +1,4 @@
-from app.schemas.marks_schema import GetAllSubjectsMarksForAStudentResponseSchema, MarksCreateSchema, MarksResponseSchema, MarksUpdateSchema
+from app.schemas.marks_schema import MarksCreateSchema, MarksResponseSchema, MarksUpdateSchema, SemesterWiseAllSubjectsMarksResponseSchema, SemesterWiseAllSubjectsMarksWithPopulatedDataResponseSchema
 from app.schemas.user_schema import UserOutSchema
 from app.services.marks_service import MarksService
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -56,7 +56,7 @@ async def delete_a_mark(
 
 
 # get all subjects marks for a student
-@router.get("/student/{student_id}", response_model=list[GetAllSubjectsMarksForAStudentResponseSchema])
+@router.get("/student/{student_id}", response_model=list[SemesterWiseAllSubjectsMarksResponseSchema])
 async def get_all_subjects_marks_for_a_student(
     student_id: int,
     semester_id: int | None = Query(None),
@@ -71,6 +71,7 @@ async def get_all_subjects_marks_for_a_student(
 @router.get(
         "/department_wise_result",
         dependencies=[Depends(ensure_admin_or_teacher)],
+        response_model=list[SemesterWiseAllSubjectsMarksWithPopulatedDataResponseSchema]
         )
 async def get_department_wise_result(
     semester_id: int,

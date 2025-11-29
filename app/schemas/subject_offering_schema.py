@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.subject_schema import SubjectBaseSchema
+
 
 class SubjectOfferingBase(BaseModel):
     taught_by_id: int

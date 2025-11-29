@@ -180,7 +180,6 @@ class MarksService:
         target_department_id: int,
         session: str,
         # current_user: UserOutSchema
-        # session: Annotated[str, Query("example: 2020-2021")]
     ):
         # Base query
         statement = select(Mark)\
@@ -194,12 +193,12 @@ class MarksService:
                     Student.session == session
                 )
         )\
-            #     .options(
-        #         # The 'Mark' objects returned will now have 'mark.student' and 'mark.subject'
-        #         # already loaded without further database hits.
-        #         joinedload(Mark.student),
-        #         joinedload(Mark.subject),
-        # )
+                .options(
+                # The 'Mark' objects returned will now have 'mark.student' and 'mark.subject'
+                # already loaded without further database hits.
+                joinedload(Mark.student),
+                joinedload(Mark.subject),
+        )
 
         # If teacher → restrict to subjects they teach
         # if current_user.role == "teacher":
@@ -209,47 +208,6 @@ class MarksService:
         marks = res.scalars().all()
 
         return MarksService.group_marks_by_semester(marks)
-
-
-
-    # get offered subjects for marking
-    # admin -> see all subjects for marking
-    # teacher -> see only the subjects they teach
-    @staticmethod
-    async def get_offered_subjects_for_marking(
-        db: AsyncSession,
-        semester_id: int,
-        department_id: int,
-        current_user: UserOutSchema
-    ):
-        j = join(Subject, SubjectOfferings, Subject.id ==
-                 SubjectOfferings.subject_id)
-
-        statement = select(Subject).select_from(j).where(
-            and_(
-                Subject.semester_id == semester_id,
-                SubjectOfferings.department_id == department_id
-            )
-        )
-
-        # stmt = select(Subject)\
-        #     .join(Subject.subject_offerings)\
-        #     .where(
-        #         and_(
-        #             Subject.semester_id == semester_id,
-        #             SubjectOfferings.department_id == department_id
-        #         )
-        #     )
-
-        # restrict subject list for teachers
-        if current_user.role.value == "teacher":
-            statement = statement.where(
-                SubjectOfferings.taught_by_id == current_user.id
-            )
-
-        result = await db.execute(statement)
-        subjects = result.scalars().all()
-        return subjects
 
     # update a mark
 
