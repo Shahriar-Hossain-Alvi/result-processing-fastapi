@@ -24,8 +24,7 @@ async def login(
     
 @router.post("/logout")
 async def logout(
-    response: Response,
-    # token_injection: None = Depends(inject_token),
+    response: Response
     ):
     try:
         return await logout_user(response)

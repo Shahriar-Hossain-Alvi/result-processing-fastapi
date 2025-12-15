@@ -13,12 +13,18 @@ router = APIRouter(
     tags=["users"]  # for swagger
 )
 
-# TODO: add token_injection in secured routes
+# TODO: add token_injection in secured routes and admin or teacher permissions
 
 
 # user register
-@router.post("/register")
-async def register_user(user_data: UserCreateSchema, db: AsyncSession = Depends(get_db_session)):
+@router.post("/register", dependencies=[Depends(ensure_admin)])
+async def register_user(
+    user_data: UserCreateSchema,
+    db: AsyncSession = Depends(get_db_session),
+    token_injection: None = Depends(inject_token),
+    current_user: UserOutSchema = Depends(get_current_user)
+):
+
     try:
         new_user = await UserService.create_user(user_data, db)
 
@@ -32,8 +38,8 @@ async def register_user(user_data: UserCreateSchema, db: AsyncSession = Depends(
 # get logged in user
 @router.get("/me", response_model=UserOutSchema)
 async def get_logged_in_user(
-    token_injection: None = Depends(inject_token),
-    current_user: UserOutSchema = Depends(get_current_user)):
+        token_injection: None = Depends(inject_token),
+        current_user: UserOutSchema = Depends(get_current_user)):
     return current_user
 
 
@@ -82,7 +88,8 @@ async def update_single_user_by_self(
     try:
         return await UserService.update_user_self(db, id, user_data, current_user)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 # delete single user
@@ -94,4 +101,5 @@ async def delete_a_user(
     try:
         return await UserService.delete_user(db, id)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
