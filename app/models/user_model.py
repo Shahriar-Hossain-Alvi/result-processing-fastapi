@@ -53,6 +53,8 @@ class User(Base):
     # but we want 1-1 so we use uselist=False
 
     # TODO: create a relationship with teacher table
+    teacher: Mapped["Teacher"] = relationship(
+        back_populates="user", uselist=False)
 
     # relationship with subject offerings
     subject_offerings: Mapped[list["SubjectOfferings"]] = relationship(

@@ -7,3 +7,4 @@ from .student_model import Student
 from .mark_model import Mark, ResultStatus
 from .subject_offerings_model import SubjectOfferings
 from .user_model import User, UserRole
+from .teacher_model import Teacher
