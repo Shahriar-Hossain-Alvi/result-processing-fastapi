@@ -29,4 +29,16 @@ class TeacherResponseSchemaNested(TeacherResponseSchema):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TeachersPublicDataResponse(BaseModel):
+    name: str
+    mobile_number: str
+    photo_url: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TeachersDepartmentWiseGroupResponse(BaseModel):
+    department_name: str
+    teachers: list[TeachersPublicDataResponse]
+    model_config = ConfigDict(from_attributes=True)
+
 # TODO: Add teacher update schema

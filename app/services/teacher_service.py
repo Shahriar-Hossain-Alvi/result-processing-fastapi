@@ -6,6 +6,7 @@ from app.models.department_model import Department
 from app.schemas.teacher_schema import TeacherCreateSchema
 from app.utils import check_existence
 from fastapi import HTTPException, status
+from sqlalchemy.orm import joinedload, selectinload
 
 
 class TeacherService:
@@ -31,7 +32,7 @@ class TeacherService:
         # check if department exist
         await check_existence(Department, db, teacher_data.department_id, "Department")
 
-        new_teacher = User(**teacher_data.model_dump())
+        new_teacher = Teacher(**teacher_data.model_dump())
         db.add(new_teacher)
         await db.commit()
         await db.refresh(new_teacher)
@@ -54,3 +55,24 @@ class TeacherService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
 
         return teacher
+
+    @staticmethod
+    async def grouped_teachers_by_department(
+        db: AsyncSession
+    ):
+        # all_teachers = await db.scalars(select(Teacher).options(joinedload(Teacher.department)).order_by(Teacher.department_id))
+
+        # result = all_teachers.all()
+
+        all_teachers = await db.scalars(
+            select(Department)
+            .options(
+                selectinload(
+                    Department.teachers
+                )
+            ).order_by(Department.department_name)
+        )
+
+        result = all_teachers.all()
+
+        return result
