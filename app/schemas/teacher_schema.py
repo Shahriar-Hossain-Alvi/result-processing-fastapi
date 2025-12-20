@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from app.schemas.user_schema import UserOutSchema
+from pydantic_partial import create_partial_model
 
 
 class TeacherBaseSchema(BaseModel):
@@ -41,4 +42,19 @@ class TeachersDepartmentWiseGroupResponse(BaseModel):
     teachers: list[TeachersPublicDataResponse]
     model_config = ConfigDict(from_attributes=True)
 
-# TODO: Add teacher update schema
+
+# 1. dynamic partial base beacuse directly using create_partial_model is giving warning in service functions parameter
+_PartialTeacher = create_partial_model(TeacherBaseSchema)
+
+
+class TeacherUpdateByAdminSchema(_PartialTeacher):
+    pass
+
+
+class TeacherUpdateSchema(BaseModel):
+    name: str | None = None
+    present_address: str = ""
+    permanent_address: str = ""
+    date_of_birth: datetime | None = None
+    mobile_number: str = ""
+    photo_url: str = ""
