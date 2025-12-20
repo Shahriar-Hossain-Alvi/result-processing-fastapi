@@ -4,7 +4,7 @@ from app.core.authenticated_user import get_current_user
 from app.services.student_service import StudentService
 from app.db.db import get_db_session
 from app.permissions.role_checks import ensure_admin_or_teacher, ensure_admin
-from app.schemas.student_schema import StudentCreateSchema, StudentOutSchema, StudentResponseSchemaNested, StudentUpdateSchema
+from app.schemas.student_schema import StudentCreateSchema, StudentOutSchema, StudentResponseSchemaNested, StudentUpdateByAdminSchema, StudentUpdateSchema
 from app.schemas.user_schema import UserOutSchema
 from app.utils.token_injector import inject_token
 
@@ -70,12 +70,32 @@ async def update_single_student(
     id: int,
     student_data: StudentUpdateSchema,
     token_injection: None = Depends(inject_token),
+    current_user: UserOutSchema = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    if current_user.id != id:
+        raise HTTPException(
+            status_code=400, detail="You are not authorized to update this record.")
+
+    try:
+        return await StudentService.update_student(db, id, student_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+# update a student by admin
+@router.patch("/updateStudenByAdmin/{id}", response_model=StudentOutSchema)
+async def update_single_student_by_admin(
+    id: int,
+    student_data: StudentUpdateByAdminSchema,
+    token_injection: None = Depends(inject_token),
     authorized_user: UserOutSchema = Depends(ensure_admin),
     db: AsyncSession = Depends(get_db_session),
 ):
 
     try:
-        return await StudentService.update_student(db, id, student_data)
+        return await StudentService.update_student_by_admin(db, id, student_data)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

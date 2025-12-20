@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+
+from pydantic_partial import create_partial_model
 from app.schemas.user_schema import UserOutSchema
 
 
@@ -34,12 +36,15 @@ class StudentResponseSchemaNested(StudentBaseSchema):
 
 class StudentUpdateSchema(BaseModel):
     name: str | None = None
-    registration: str | None = None
-    session: str | None = None
-    department_id: int | None = None
-    semester_id: int | None = None
     present_address: str | None = None
     permanent_address: str | None = None
     date_of_birth: datetime | None = None
     mobile_number: str | None = None
     photo_url: str | None = None
+
+
+_Partial_Student = create_partial_model(StudentBaseSchema)
+
+
+class StudentUpdateByAdminSchema(_Partial_Student):
+    pass

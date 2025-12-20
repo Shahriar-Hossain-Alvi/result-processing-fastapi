@@ -4,10 +4,11 @@ from app.models.department_model import Department
 from app.models.semester_model import Semester
 from app.models.student_model import Student
 from app.models.user_model import User
-from app.schemas.student_schema import StudentCreateSchema, StudentUpdateSchema
+from app.schemas.student_schema import StudentCreateSchema, StudentUpdateByAdminSchema, StudentUpdateSchema
 from fastapi import HTTPException, status
 from sqlalchemy.orm import joinedload
 
+from app.schemas.user_schema import UserOutSchema
 from app.utils import check_existence
 
 
@@ -69,6 +70,31 @@ class StudentService:
         if not student:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+        return student
+
+    @staticmethod
+    async def update_student_by_admin(
+            db: AsyncSession,
+            student_id: int,
+            student_update_data: StudentUpdateByAdminSchema
+    ):
+        # check for existing student
+        student = await db.scalar(select(Student).where(Student.id == student_id))
+
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+        updated_student_data = student_update_data.model_dump(
+            exclude_unset=True)  # convert to dictionary
+
+        for key, value in updated_student_data.items():
+            # apply the updated data in the student object(from DB)
+            setattr(student, key, value)
+
+        await db.commit()
+        await db.refresh(student)
 
         return student
 
