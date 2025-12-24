@@ -104,18 +104,13 @@ class TeacherService:
     async def update_teacher(
         db: AsyncSession,
         teacher_id: int,
-        teacher_data: TeacherUpdateSchema,
-        current_user: UserOutSchema
+        teacher_data: TeacherUpdateSchema
     ):
         # check for teachers existence
         teacher = await check_existence(Teacher, db, teacher_id, "Teacher")
         if not teacher:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
-
-        if teacher.user_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to update this teacher")
 
         updated_teacher_data = teacher_data.model_dump(exclude_unset=True)
 

@@ -80,9 +80,12 @@ async def update_teacher(
         current_user: UserOutSchema = Depends(get_current_user),
         db: AsyncSession = Depends(get_db_session)
 ):
+    if id != current_user.id:
+        raise HTTPException(
+            status_code=400, detail="You are not authorized to update this record.")
 
     try:
-        return await TeacherService.update_teacher(db, id, teacher_data, current_user)
+        return await TeacherService.update_teacher(db, id, teacher_data)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

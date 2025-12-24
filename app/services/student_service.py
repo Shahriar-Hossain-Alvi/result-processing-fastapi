@@ -1,13 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.pw_hash import hash_password
 from app.models.department_model import Department
 from app.models.semester_model import Semester
 from app.models.student_model import Student
 from app.models.user_model import User
-from app.schemas.student_schema import StudentCreateSchema, StudentUpdateSchema
+from app.schemas.student_schema import StudentCreateSchema, StudentUpdateByAdminSchema, StudentUpdateSchema
 from fastapi import HTTPException, status
 from sqlalchemy.orm import joinedload
-
+from sqlalchemy.exc import IntegrityError
+from app.schemas.user_schema import UserOutSchema
 from app.utils import check_existence
 
 
@@ -19,17 +21,15 @@ class StudentService:
             student_data: StudentCreateSchema
     ):
         # check for existance in user table
-        user = await check_existence(User, db, student_data.user_id, "User")
+        existing_user = await db.scalar(select(User).where(User.username == student_data.user.username))
 
-        if not user.role.value == "student":
+        if existing_user:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="User with this email already exist")
+
+        if not student_data.user.role.value == "student":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="User is not a student. Cannot create student")
-
-        # check for existing student
-        student = await db.scalar(select(Student).where(Student.user_id == student_data.user_id))
-
-        if (student):
-            raise ValueError("Student already exist")
 
         # check if department exist
         await check_existence(Department, db, student_data.department_id, "Department")
@@ -37,20 +37,41 @@ class StudentService:
         # check if semester exist
         await check_existence(Semester, db, student_data.semester_id, "Semester")
 
-        new_student = Student(**student_data.model_dump())
-        db.add(new_student)
-        await db.commit()
-        await db.refresh(new_student)
+        try:
+            # create user
+            new_user_info = student_data.user.model_dump()
+            raw_password = new_user_info.pop("password")
 
-        return {
-            "message": f"new_student created successfully. ID: {new_student.id}"
-        }
+            new_user = User(
+                **new_user_info,
+                hashed_password=hash_password(raw_password)
+            )
+
+            db.add(new_user)
+            await db.flush()  # This won't add the user to the database yet but it'll generate a primary key for the user
+
+            # create student
+            new_student_info = student_data.model_dump(exclude={"user"})
+            new_student = Student(
+                **new_student_info,
+                user_id=new_user.id
+            )
+            db.add(new_student)
+            await db.commit()
+            await db.refresh(new_student)
+
+            return {
+                "message": f"Student created successfully. ID: {new_student.id}, User ID: {new_user.id}"
+            }
+        except IntegrityError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create Student. Please try again")
 
     @staticmethod
     async def get_students(
             db: AsyncSession
     ):
-        students = await db.scalars(select(Student))
+        students = await db.scalars(select(Student).options(joinedload(Student.user)))
 
         return students.all()
 
@@ -69,6 +90,31 @@ class StudentService:
         if not student:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+        return student
+
+    @staticmethod
+    async def update_student_by_admin(
+            db: AsyncSession,
+            student_id: int,
+            student_update_data: StudentUpdateByAdminSchema
+    ):
+        # check for existing student
+        student = await db.scalar(select(Student).where(Student.id == student_id))
+
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+        updated_student_data = student_update_data.model_dump(
+            exclude_unset=True)  # convert to dictionary
+
+        for key, value in updated_student_data.items():
+            # apply the updated data in the student object(from DB)
+            setattr(student, key, value)
+
+        await db.commit()
+        await db.refresh(student)
 
         return student
 

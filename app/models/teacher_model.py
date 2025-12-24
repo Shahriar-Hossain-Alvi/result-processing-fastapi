@@ -21,7 +21,8 @@ class Teacher(Base):
 
     # Relationship with user table
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey(
-        "users.id", ondelete="CASCADE"))  # delete teachers record if user is deleted
+        # delete teachers record if user is deleted
+        "users.id", ondelete="CASCADE"), unique=True)
 
     user: Mapped["User"] = relationship(  # type: ignore
         back_populates="teacher")
@@ -43,4 +44,8 @@ class Teacher(Base):
 
     photo_url: Mapped[str] = mapped_column(
         String(400), nullable=False, default=""
+    )
+
+    photo_public_id: Mapped[str] = mapped_column(
+        String(300), nullable=False, default=""
     )

@@ -1,6 +1,8 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from app.schemas.user_schema import UserOutSchema
+
+from pydantic_partial import create_partial_model
+from app.schemas.user_schema import UserCreateSchema, UserOutSchema
 
 
 class StudentBaseSchema(BaseModel):
@@ -9,16 +11,17 @@ class StudentBaseSchema(BaseModel):
     session: str
     department_id: int
     semester_id: int
-    user_id: int
+    # user_id: int # Don't need this because user and student will be created in same service function
     present_address: str = ""
     permanent_address: str = ""
     date_of_birth: datetime | None = None
     mobile_number: str = ""
     photo_url: str = ""
+    photo_public_id: str = ""
 
 
 class StudentCreateSchema(StudentBaseSchema):
-    pass
+    user: UserCreateSchema
 
 
 class StudentOutSchema(StudentBaseSchema):
@@ -34,12 +37,15 @@ class StudentResponseSchemaNested(StudentBaseSchema):
 
 class StudentUpdateSchema(BaseModel):
     name: str | None = None
-    registration: str | None = None
-    session: str | None = None
-    department_id: int | None = None
-    semester_id: int | None = None
     present_address: str | None = None
     permanent_address: str | None = None
     date_of_birth: datetime | None = None
     mobile_number: str | None = None
     photo_url: str | None = None
+
+
+_Partial_Student = create_partial_model(StudentBaseSchema)
+
+
+class StudentUpdateByAdminSchema(_Partial_Student):
+    pass
