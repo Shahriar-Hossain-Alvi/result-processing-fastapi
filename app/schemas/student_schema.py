@@ -9,8 +9,8 @@ class StudentBaseSchema(BaseModel):
     name: str
     registration: str
     session: str
-    department_id: int
-    semester_id: int
+    department_id: int | None = None
+    semester_id: int | None = None
     # user_id: int # Don't need this because user and student will be created in same service function
     present_address: str = ""
     permanent_address: str = ""

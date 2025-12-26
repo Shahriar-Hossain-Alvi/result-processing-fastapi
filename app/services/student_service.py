@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.integrity_error_parser import parse_integrity_error
 from app.core.pw_hash import hash_password
 from app.models.department_model import Department
 from app.models.semester_model import Semester
@@ -32,10 +33,12 @@ class StudentService:
                                 detail="User is not a student. Cannot create student")
 
         # check if department exist
-        await check_existence(Department, db, student_data.department_id, "Department")
+        if student_data.department_id:
+            await check_existence(Department, db, student_data.department_id, "Department")
 
         # check if semester exist
-        await check_existence(Semester, db, student_data.semester_id, "Semester")
+        if student_data.semester_id:
+            await check_existence(Semester, db, student_data.semester_id, "Semester")
 
         try:
             # create user
@@ -61,11 +64,18 @@ class StudentService:
             await db.refresh(new_student)
 
             return {
-                "message": f"Student created successfully. ID: {new_student.id}, User ID: {new_user.id}"
+                "message": f"Student created successfully. Student ID: {new_student.id}, User ID: {new_user.id}"
             }
         except IntegrityError as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to create Student. Please try again")
+            # generally the PostgreSQL's error message will be in e.orig.args[0]
+            error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
+                e)
+
+            # send the error message to the parser
+            readable_error = parse_integrity_error(error_msg)
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
 
     @staticmethod
     async def get_students(
