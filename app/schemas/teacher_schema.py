@@ -1,22 +1,23 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from app.schemas.user_schema import UserOutSchema
+from app.schemas.user_schema import UserCreateSchema, UserOutSchema
 from pydantic_partial import create_partial_model
 
 
 class TeacherBaseSchema(BaseModel):
     name: str
-    department_id: int
-    user_id: int
+    department_id: int | None = None
+    # user_id: int # Don't need this because user and teacher will be created in same service function
     present_address: str = ""
     permanent_address: str = ""
     date_of_birth: datetime | None = None
     mobile_number: str = ""
     photo_url: str = ""
+    photo_public_id: str = ""
 
 
 class TeacherCreateSchema(TeacherBaseSchema):
-    pass
+    user: UserCreateSchema
 
 
 class TeacherResponseSchema(TeacherBaseSchema):

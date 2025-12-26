@@ -26,7 +26,8 @@ class Student(Base):
 
     # Relationship with semester
     semester_id: Mapped[int] = mapped_column(Integer, ForeignKey(
-        "semesters.id", ondelete="SET NULL"))  # set null if department is deleted
+        # set null if semester is deleted
+        "semesters.id", ondelete="SET NULL"), nullable=True)
 
     # each student has one semester (current semester)
     semester: Mapped["Semester"] = relationship(  # type: ignore

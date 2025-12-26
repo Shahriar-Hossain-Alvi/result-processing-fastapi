@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.integrity_error_parser import parse_integrity_error
+from app.core.pw_hash import hash_password
 from app.models.user_model import User
 from app.models.teacher_model import Teacher
 from app.models.department_model import Department
@@ -19,30 +20,46 @@ class TeacherService:
         db: AsyncSession,
         teacher_data: TeacherCreateSchema
     ):
-        # check for existance in user table and throw error
-        user = await check_existence(User, db, teacher_data.user_id, "User")
+        # check for existance in user table
+        existing_user = await db.scalar(select(User).where(User.username == teacher_data.user.username))
 
-        if not user.role.value == "teacher":
+        if existing_user:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="User with this email already exist")
+
+        if not teacher_data.user.role.value == "teacher":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                                detail="User is not a teacher. Cannot create teacher")
-
-        # check for duplicate teacher
-        teacher = await db.scalar(select(Teacher).where(Teacher.user_id == teacher_data.user_id))
-
-        if (teacher):
-            raise ValueError("Teacher already exist")
+                                detail="User is not a teacher. Cannot create teacher.")
 
         # check if department exist
-        await check_existence(Department, db, teacher_data.department_id, "Department")
+        if teacher_data.department_id:
+            await check_existence(Department, db, teacher_data.department_id, "Department")
 
         try:
-            new_teacher = Teacher(**teacher_data.model_dump())
+            # create user
+            new_user_info = teacher_data.user.model_dump()
+            raw_password = new_user_info.pop("password")
+
+            new_user = User(
+                **new_user_info,
+                hashed_password=hash_password(raw_password)
+            )
+
+            db.add(new_user)
+            await db.flush()  # This won't  add the user to the database yet but it'll generate a primary key for the user
+
+            # create teacher
+            new_teacher_info = teacher_data.model_dump(exclude={"user"})
+            new_teacher = Teacher(
+                **new_teacher_info,
+                user_id=new_user.id
+            )
             db.add(new_teacher)
             await db.commit()
             await db.refresh(new_teacher)
 
             return {
-                "message": f"new_teacher created successfully. ID: {new_teacher.id}"
+                "message": f"Teacher created successfully. Teacher ID: {new_teacher.id}, User ID: {new_user.id}"
             }
         except IntegrityError as e:
             # generally the PostgreSQL's error message will be in e.orig.args[0]

@@ -33,10 +33,12 @@ class StudentService:
                                 detail="User is not a student. Cannot create student")
 
         # check if department exist
-        await check_existence(Department, db, student_data.department_id, "Department")
+        if student_data.department_id:
+            await check_existence(Department, db, student_data.department_id, "Department")
 
         # check if semester exist
-        await check_existence(Semester, db, student_data.semester_id, "Semester")
+        if student_data.semester_id:
+            await check_existence(Semester, db, student_data.semester_id, "Semester")
 
         try:
             # create user
@@ -62,7 +64,7 @@ class StudentService:
             await db.refresh(new_student)
 
             return {
-                "message": f"Student created successfully. ID: {new_student.id}, User ID: {new_user.id}"
+                "message": f"Student created successfully. Student ID: {new_student.id}, User ID: {new_user.id}"
             }
         except IntegrityError as e:
             # generally the PostgreSQL's error message will be in e.orig.args[0]

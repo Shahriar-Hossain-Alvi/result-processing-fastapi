@@ -8,7 +8,7 @@ from app.schemas.user_schema import UserOutSchema
 from app.utils.token_injector import inject_token
 from app.services.teacher_service import TeacherService
 
-router = APIRouter(prefix='/teacher', tags=['teachers'])
+router = APIRouter(prefix='/teachers', tags=['teachers'])
 
 # create teacher record
 
