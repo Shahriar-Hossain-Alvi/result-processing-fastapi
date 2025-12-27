@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from app.core.authenticated_user import get_current_user
 from app.core.integrity_error_parser import parse_integrity_error
 from app.db.db import get_db_session
@@ -8,6 +8,7 @@ from app.schemas.user_schema import UserCreateSchema, UserOutSchema, UserUpdateS
 from app.core import hash_password
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 
 class UserService:
@@ -40,7 +41,7 @@ class UserService:
             await db.commit()  # commit the changes(adds to database)
             await db.refresh(new_user)  # refresh the object(get the new data)
 
-            return new_user
+            return {"message": f"User created successfully. ID: {new_user.id}, username: {new_user.username}"}
         except IntegrityError as e:
             # generally the PostgreSQL's error message will be in e.orig.args[0]
             error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
@@ -52,11 +53,25 @@ class UserService:
                 status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
 
     @staticmethod
-    async def get_users(db: AsyncSession):
-        statement = select(User)
-        result = await db.execute(statement)
+    async def get_users(
+        db: AsyncSession,
+        user_role: str | None = None
+    ):
+        query = (
+            select(User)
+            .options(
+                joinedload(User.teacher),
+                joinedload(User.student)
+            )
+        )
 
-        return result.scalars().all()
+        if user_role:
+            query = query.where(User.role == user_role)
+
+        result = await db.execute(query)
+        all_users = result.scalars().unique().all()
+
+        return all_users
 
     @staticmethod
     async def get_user(db: AsyncSession, user_id: int):
