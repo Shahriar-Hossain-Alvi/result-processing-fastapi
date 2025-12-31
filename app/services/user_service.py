@@ -4,11 +4,13 @@ from app.core.authenticated_user import get_current_user
 from app.core.integrity_error_parser import parse_integrity_error
 from app.db.db import get_db_session
 from app.models import User
+from app.models.student_model import Student
+from app.models.teacher_model import Teacher
 from app.schemas.user_schema import UserCreateSchema, UserOutSchema, UserUpdateSchemaByAdmin, UserUpdateSchemaByUser
 from app.core import hash_password
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 
 class UserService:
@@ -60,8 +62,12 @@ class UserService:
         query = (
             select(User)
             .options(
-                joinedload(User.teacher),
-                joinedload(User.student)
+                # User -> Teacher -> Department
+                selectinload(User.teacher).selectinload(Teacher.department),
+
+                # User -> Student -> Department & Semester
+                selectinload(User.student).selectinload(Student.department),
+                selectinload(User.student).selectinload(Student.semester),
             )
         )
 
@@ -69,7 +75,7 @@ class UserService:
             query = query.where(User.role == user_role)
 
         result = await db.execute(query)
-        all_users = result.scalars().unique().all()
+        all_users = result.scalars().unique().all()  # unique
 
         return all_users
 

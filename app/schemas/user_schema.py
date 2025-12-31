@@ -1,4 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr
+from app.schemas.department_schema import DepartmentOutSchema
+from app.schemas.semester_schema import SemesterOutSchema
 from app.models import UserRole
 from datetime import datetime
 
@@ -40,11 +42,11 @@ class StudentResponseSchemaToGetAllUser(BaseModel):
     name: str
     registration: str
     session: str
-    department_id: int | None
-    semester_id: int | None
+    department: DepartmentOutSchema | None = None
+    semester: SemesterOutSchema | None = None
     present_address: str
     permanent_address: str
-    date_of_birth: datetime | None
+    date_of_birth: datetime | None = None
     mobile_number: str
     photo_url: str
     photo_public_id: str
@@ -54,10 +56,10 @@ class StudentResponseSchemaToGetAllUser(BaseModel):
 class TeacherResponseSchemaToGetAllUser(BaseModel):
     id: int
     name: str
-    department_id: int | None
+    department: DepartmentOutSchema | None = None
     present_address: str
     permanent_address: str
-    date_of_birth: datetime | None
+    date_of_birth: datetime | None = None
     mobile_number: str
     photo_url: str
     photo_public_id: str
@@ -69,6 +71,7 @@ class AllUsersWithDetailsResponseSchema(BaseModel):
     username: EmailStr
     email: EmailStr
     role: UserRole
+    is_active: bool
 
     # optional profile data
     student: StudentResponseSchemaToGetAllUser | None = None

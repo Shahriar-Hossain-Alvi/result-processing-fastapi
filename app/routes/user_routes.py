@@ -40,10 +40,7 @@ async def get_logged_in_user(
 
 
 # get all user
-@router.get("/",
-            # response_model=list[UserOutSchema]
-            response_model=list[AllUsersWithDetailsResponseSchema]
-            )
+@router.get("/", response_model=list[AllUsersWithDetailsResponseSchema])
 async def get_all_users(
     user_role: str | None = None,
     db: AsyncSession = Depends(get_db_session),
