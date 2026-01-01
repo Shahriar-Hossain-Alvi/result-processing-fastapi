@@ -57,7 +57,7 @@ async def get_all_users(
 
 
 # get single user TODO: does this need permissions? if not, add dependency array
-@router.get("/{id}", response_model=UserOutSchema)
+@router.get("/{id}", response_model=AllUsersWithDetailsResponseSchema)
 async def get_single_user(
     id: int,
     token_injection: None = Depends(inject_token),
