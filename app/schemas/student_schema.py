@@ -1,4 +1,5 @@
-from pydantic import BaseModel, ConfigDict, Field
+import re
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import date, datetime
 from pydantic_partial import create_partial_model
 from app.schemas.user_schema import UserCreateSchema, UserOutSchema
@@ -7,7 +8,7 @@ from app.schemas.user_schema import UserCreateSchema, UserOutSchema
 class StudentBaseSchema(BaseModel):
     name: str
     registration: str
-    session: str = Field(pattern=r"^\d{4}-\d{4}$")
+    session: str = Field(..., examples=["2020-2021"])
     department_id: int | None = None
     semester_id: int | None = None
     # user_id: int # Don't need this because user and student will be created in same service function
@@ -17,6 +18,14 @@ class StudentBaseSchema(BaseModel):
     mobile_number: str = ""
     photo_url: str = ""
     photo_public_id: str = ""
+
+    @field_validator("session")
+    @classmethod
+    def validate_session_format(cls, v: str) -> str:
+        if not re.match(r"^\d{4}-\d{4}$", v):
+            raise ValueError(
+                'Session must be in "YYYY-YYYY" format (e.g., 2020-2021)')
+        return v
 
 
 class StudentCreateSchema(StudentBaseSchema):

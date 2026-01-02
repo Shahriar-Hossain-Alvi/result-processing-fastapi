@@ -1,6 +1,6 @@
 from app.db.base import Base
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import Date, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Date, Integer, String, ForeignKey
 from datetime import date
 from app.models.timestamp import TimestampMixin
 
