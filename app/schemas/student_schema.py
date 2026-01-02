@@ -1,6 +1,5 @@
-from pydantic import BaseModel, ConfigDict
-from datetime import datetime
-
+from pydantic import BaseModel, ConfigDict, Field
+from datetime import date, datetime
 from pydantic_partial import create_partial_model
 from app.schemas.user_schema import UserCreateSchema, UserOutSchema
 
@@ -8,13 +7,13 @@ from app.schemas.user_schema import UserCreateSchema, UserOutSchema
 class StudentBaseSchema(BaseModel):
     name: str
     registration: str
-    session: str
+    session: str = Field(pattern=r"^\d{4}-\d{4}$")
     department_id: int | None = None
     semester_id: int | None = None
     # user_id: int # Don't need this because user and student will be created in same service function
     present_address: str = ""
     permanent_address: str = ""
-    date_of_birth: datetime | None = None
+    date_of_birth: date | None = None
     mobile_number: str = ""
     photo_url: str = ""
     photo_public_id: str = ""
@@ -26,11 +25,15 @@ class StudentCreateSchema(StudentBaseSchema):
 
 class StudentOutSchema(StudentBaseSchema):
     id: int
+    created_at: datetime
+    updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
 class StudentResponseSchemaNested(StudentBaseSchema):
     id: int
+    created_at: datetime
+    updated_at: datetime
     user: UserOutSchema
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,7 +42,7 @@ class StudentUpdateSchema(BaseModel):
     name: str | None = None
     present_address: str | None = None
     permanent_address: str | None = None
-    date_of_birth: datetime | None = None
+    date_of_birth: date | None = None
     mobile_number: str | None = None
     photo_url: str | None = None
 

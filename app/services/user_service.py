@@ -69,7 +69,7 @@ class UserService:
                 selectinload(User.student).selectinload(Student.department),
                 selectinload(User.student).selectinload(Student.semester),
             )
-        )
+        ).order_by(User.id)
 
         if user_role:
             query = query.where(User.role == user_role)

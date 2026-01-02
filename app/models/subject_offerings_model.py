@@ -1,9 +1,10 @@
 from app.db.base import Base
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import Integer, ForeignKey
+from app.models.timestamp import TimestampMixin
 
 
-class SubjectOfferings(Base):
+class SubjectOfferings(Base, TimestampMixin):
     __tablename__ = "subject_offerings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

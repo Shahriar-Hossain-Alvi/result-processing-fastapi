@@ -4,6 +4,7 @@ from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import Integer, Float, ForeignKey, UniqueConstraint, Boolean, DateTime
 import enum
 from sqlalchemy import Enum as sqlEnum
+from app.models.timestamp import TimestampMixin
 
 
 class ResultStatus(enum.Enum):
@@ -13,7 +14,7 @@ class ResultStatus(enum.Enum):
     CHALLENGED = "challedged"  # error color
 
 
-class Mark(Base):
+class Mark(Base, TimestampMixin):
     __tablename__ = "marks"
 
     # a student can have only one mark for a subject in a semester

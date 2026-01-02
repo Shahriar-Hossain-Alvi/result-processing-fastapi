@@ -72,7 +72,7 @@ DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_SERVE
 
 # --- JWT Settings ---
 SECRET_KEY="<your_super_secret_key_here>" # Generate with: openssl rand -hex 32
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+ACCESS_TOKEN_EXPIRE_MINUTES=180
 ```
 
 gitignore

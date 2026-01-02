@@ -4,6 +4,7 @@ from sqlalchemy import Integer, String, Boolean
 from pydantic import EmailStr
 import enum
 from sqlalchemy import Enum as sqlEnum
+from app.models.timestamp import TimestampMixin
 
 # For creating an admin account only
 
@@ -21,7 +22,7 @@ class UserRole(enum.Enum):
 """
 
 
-class User(Base):
+class User(Base, TimestampMixin):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 

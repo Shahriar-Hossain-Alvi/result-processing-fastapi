@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from app.schemas.department_schema import DepartmentOutSchema
 from app.schemas.semester_schema import SemesterOutSchema
 from app.models import UserRole
-from datetime import datetime
+from datetime import date, datetime
 
 
 class UserBaseSchema(BaseModel):
@@ -28,6 +28,8 @@ class UserUpdateSchemaByUser(BaseModel):
 
 class UserOutSchema(UserBaseSchema):
     id: int
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
     # this is required for response models.
@@ -45,11 +47,13 @@ class StudentResponseSchemaToGetAllUser(BaseModel):
     semester: SemesterOutSchema | None = None
     present_address: str
     permanent_address: str
-    date_of_birth: datetime | None = None
+    date_of_birth: date | None = None
     mobile_number: str
     photo_url: str
     photo_public_id: str
     model_config = ConfigDict(from_attributes=True)
+    created_at: datetime
+    updated_at: datetime
 
 
 class TeacherResponseSchemaToGetAllUser(BaseModel):
@@ -58,11 +62,13 @@ class TeacherResponseSchemaToGetAllUser(BaseModel):
     department: DepartmentOutSchema | None = None
     present_address: str
     permanent_address: str
-    date_of_birth: datetime | None = None
+    date_of_birth: date | None = None
     mobile_number: str
     photo_url: str
     photo_public_id: str
     model_config = ConfigDict(from_attributes=True)
+    created_at: datetime
+    updated_at: datetime
 
 
 class AllUsersWithDetailsResponseSchema(BaseModel):
@@ -71,6 +77,8 @@ class AllUsersWithDetailsResponseSchema(BaseModel):
     email: EmailStr
     role: UserRole
     is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     # optional profile data
     student: StudentResponseSchemaToGetAllUser | None = None

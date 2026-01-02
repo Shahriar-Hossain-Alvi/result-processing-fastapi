@@ -1,11 +1,10 @@
 from app.db.base import Base
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import Integer, String
+from app.models.timestamp import TimestampMixin
 
-# Department = id, name
 
-
-class Department(Base):
+class Department(Base, TimestampMixin):
     __tablename__ = "departments"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

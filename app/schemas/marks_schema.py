@@ -36,6 +36,8 @@ class MarksResponseSchema(MarksBaseSchema):
     id: int
     total_mark: float
     GPA: float
+    created_at: datetime
+    updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -50,6 +52,8 @@ class PopulatedMarksResponseSchema(MarksBaseSchema):
     total_mark: float
     GPA: float
     subject: SubjectOutSchema
+    created_at: datetime
+    updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
