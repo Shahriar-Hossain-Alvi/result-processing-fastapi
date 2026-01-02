@@ -1,10 +1,11 @@
 from app.db.base import Base
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import Integer, String, ForeignKey, DateTime
-from datetime import datetime
+from sqlalchemy import Date, Integer, String, ForeignKey, DateTime
+from datetime import datetime, date
+from app.models.timestamp import TimestampMixin
 
 
-class Student(Base):
+class Student(Base, TimestampMixin):
     __tablename__ = "students"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -53,8 +54,8 @@ class Student(Base):
     permanent_address: Mapped[str] = mapped_column(
         String(200), nullable=False, default="")
 
-    date_of_birth: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
+    date_of_birth: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=None
     )
 
     mobile_number: Mapped[str] = mapped_column(

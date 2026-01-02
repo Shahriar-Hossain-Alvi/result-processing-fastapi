@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+from datetime import date, datetime
 from app.schemas.user_schema import UserCreateSchema, UserOutSchema
 from pydantic_partial import create_partial_model
 
@@ -10,7 +10,7 @@ class TeacherBaseSchema(BaseModel):
     # user_id: int # Don't need this because user and teacher will be created in same service function
     present_address: str = ""
     permanent_address: str = ""
-    date_of_birth: datetime | None = None
+    date_of_birth: date | None = None
     mobile_number: str = ""
     photo_url: str = ""
     photo_public_id: str = ""
@@ -22,6 +22,8 @@ class TeacherCreateSchema(TeacherBaseSchema):
 
 class TeacherResponseSchema(TeacherBaseSchema):
     id: int
+    created_at: datetime
+    updated_at: datetime
     user_id: int
     model_config = ConfigDict(from_attributes=True)
 
@@ -57,6 +59,6 @@ class TeacherUpdateSchema(BaseModel):
     name: str | None = None
     present_address: str = ""
     permanent_address: str = ""
-    date_of_birth: datetime | None = None
+    date_of_birth: date | None = None
     mobile_number: str = ""
     photo_url: str = ""

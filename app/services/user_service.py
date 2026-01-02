@@ -69,7 +69,7 @@ class UserService:
                 selectinload(User.student).selectinload(Student.department),
                 selectinload(User.student).selectinload(Student.semester),
             )
-        )
+        ).order_by(User.id)
 
         if user_role:
             query = query.where(User.role == user_role)
@@ -81,13 +81,26 @@ class UserService:
 
     @staticmethod
     async def get_user(db: AsyncSession, user_id: int):
-        result = await db.scalar(select(User).where(User.id == user_id))
+        query = (
+            select(User)
+            .options(
+                # User -> Teacher -> Department
+                selectinload(User.teacher).selectinload(Teacher.department),
 
-        if not result:
+                # User -> Student -> Department & Semester
+                selectinload(User.student).selectinload(Student.department),
+                selectinload(User.student).selectinload(Student.semester),
+            )
+        )
+
+        result = await db.execute(query.where(User.id == user_id))
+        single_user = result.scalar_one_or_none()  # unique
+
+        if not single_user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-        return result
+        return single_user
 
     @staticmethod
     async def update_user_by_admin(db: AsyncSession, user_id: int, user_update_data_by_admin: UserUpdateSchemaByAdmin):
@@ -107,7 +120,9 @@ class UserService:
             await db.commit()
             await db.refresh(user)
 
-            return user
+            return {
+                "message": f"User updated successfully for username: {user.username}, role: {user.role.value}"
+            }
         except IntegrityError as e:
             # generally the PostgreSQL's error message will be in e.orig.args[0]
             error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
