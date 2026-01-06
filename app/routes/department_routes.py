@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from app.core.authenticated_user import get_current_user
-from app.permissions.role_checks import ensure_admin
+from app.permissions.role_checks import ensure_admin, ensure_super_admin
 from app.services.department_service import DepartmentService
 from app.models.user_model import UserRole
 from app.schemas.department_schema import DepartmentCreateSchema, DepartmentOutSchema, DepartmentUpdateSchema
@@ -22,13 +22,13 @@ router = APIRouter(
 @router.post("/")
 async def create_new_department(
     department_data: DepartmentCreateSchema,
+    request: Request,
     db: AsyncSession = Depends(get_db_session),
-    # token_injection: None = Depends(inject_token),
     authorized_user: UserOutSchema = Depends(ensure_admin),
 ):
 
     try:
-        return await DepartmentService.create_department(db, department_data)
+        return await DepartmentService.create_department(department_data, request, db, authorized_user)
     except HTTPException:
         raise
     except Exception as e:
@@ -73,13 +73,13 @@ async def get_single_department(
 async def update_single_department(
     id: int,
     department_data: DepartmentUpdateSchema,
+    request: Request,
     db: AsyncSession = Depends(get_db_session),
-    # token_injection: None = Depends(inject_token),
     authorized_user: UserOutSchema = Depends(ensure_admin),
 ):
 
     try:
-        return await DepartmentService.update_department(db, id, department_data)
+        return await DepartmentService.update_department(id, department_data, request, db, authorized_user)
     except HTTPException:
         raise
     except Exception as e:
@@ -91,12 +91,13 @@ async def update_single_department(
 @router.delete("/{id}")
 async def delete_single_department(
     id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db_session),
     # token_injection: None = Depends(inject_token),
-    authorized_user: UserOutSchema = Depends(ensure_admin),
+    authorized_user: UserOutSchema = Depends(ensure_super_admin),
 ):
     try:
-        return await DepartmentService.delete_department(db, id)
+        return await DepartmentService.delete_department(id, request, db, authorized_user)
     except HTTPException:
         raise
     except Exception as e:

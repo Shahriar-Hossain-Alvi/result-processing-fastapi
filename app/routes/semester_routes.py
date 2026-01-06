@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.authenticated_user import get_current_user
-from app.permissions.role_checks import ensure_admin
+from app.permissions.role_checks import ensure_admin, ensure_super_admin
 from app.services.semester_service import SemesterService
 from app.db.db import get_db_session
 from app.schemas.semester_schema import SemesterCreateSchema, SemesterOutSchema, SemesterUpdateSchema
@@ -20,13 +20,14 @@ router = APIRouter(
 @router.post("/")
 async def add__new_semester(
     semester_data: SemesterCreateSchema,
+    request: Request,
     db: AsyncSession = Depends(get_db_session),
     # token_injection: None = Depends(inject_token),
     authorized_user: UserOutSchema = Depends(ensure_admin),
 ):
 
     try:
-        return await SemesterService.create_semester(db, semester_data)
+        return await SemesterService.create_semester(semester_data, request, db, authorized_user)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except HTTPException:
@@ -62,12 +63,13 @@ async def get_single_semester(id: int, db: AsyncSession = Depends(get_db_session
 async def update_single_semester(
     id: int,
     semester_data: SemesterUpdateSchema,
+    request: Request,
     db: AsyncSession = Depends(get_db_session),
     # token_injection: None = Depends(inject_token),
     authorized_user: UserOutSchema = Depends(ensure_admin),
 ):
     try:
-        return await SemesterService.update_semester(db, id, semester_data)
+        return await SemesterService.update_semester(id, semester_data, request, db, authorized_user)
     except HTTPException:
         raise
     except Exception as e:
@@ -78,13 +80,14 @@ async def update_single_semester(
 @router.delete("/{id}")
 async def delete_single_semester(
     id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db_session),
     # token_injection: None = Depends(inject_token),
-    authorized_user: UserOutSchema = Depends(ensure_admin),
+    authorized_user: UserOutSchema = Depends(ensure_super_admin),
 ):
 
     try:
-        return await SemesterService.delete_semester(db, id)
+        return await SemesterService.delete_semester(id, request, db, authorized_user)
     except HTTPException:
         raise
     except Exception as e:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.authenticated_user import get_current_user
@@ -19,14 +19,15 @@ router = APIRouter(
 
 @router.post("/")
 async def create_student_record(
+        request: Request,
         student_data: StudentCreateSchema,
         # token_injection: None = Depends(inject_token),
         authorized_user: UserOutSchema = Depends(ensure_admin),
-        db: AsyncSession = Depends(get_db_session),
+        db: AsyncSession = Depends(get_db_session)
 ):
 
     try:
-        return await StudentService.create_student(db, student_data)
+        return await StudentService.create_student(db, request, student_data, authorized_user)
     except HTTPException:
         raise
     except Exception as e:

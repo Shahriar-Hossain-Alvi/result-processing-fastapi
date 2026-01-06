@@ -3,15 +3,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.integrity_error_parser import parse_integrity_error
 from app.core.pw_hash import hash_password
+from app.models.audit_log_model import LogLevel
 from app.models.department_model import Department
 from app.models.semester_model import Semester
 from app.models.student_model import Student
 from app.models.user_model import User
+from app.permissions.role_checks import ensure_admin
 from app.schemas.student_schema import StudentCreateSchema, StudentUpdateByAdminSchema, StudentUpdateSchema
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status, Depends
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from app.schemas.user_schema import UserOutSchema
+from app.services.audit_logging_service import create_audit_log
 from app.utils import check_existence
 
 
@@ -20,7 +23,9 @@ class StudentService:
     @staticmethod
     async def create_student(
             db: AsyncSession,
-            student_data: StudentCreateSchema
+            request: Request,
+            student_data: StudentCreateSchema,
+            authorized_user: UserOutSchema = Depends(ensure_admin),
     ):
         # check for existance in user table
         existing_user = await db.scalar(select(User).where(User.username == student_data.user.username))
@@ -43,7 +48,7 @@ class StudentService:
 
         try:
             # create user
-            new_user_info = student_data.user.model_dump()
+            new_user_info = student_data.user.model_dump(mode="json")
             raw_password = new_user_info.pop("password")
 
             new_user = User(
@@ -55,7 +60,8 @@ class StudentService:
             await db.flush()  # This won't add the user to the database yet but it'll generate a primary key for the user
 
             # create student
-            new_student_info = student_data.model_dump(exclude={"user"})
+            new_student_info = student_data.model_dump(
+                exclude={"user"})
             new_student = Student(
                 **new_student_info,
                 user_id=new_user.id
@@ -63,7 +69,15 @@ class StudentService:
             db.add(new_student)
             await db.commit()
             await db.refresh(new_student)
+
             logger.success("New student created successfully")
+
+            # DB Log
+            await create_audit_log(
+                db=db, request=request, level=LogLevel.INFO.value, user_id=authorized_user.id,
+                action="CREATE STUDENT SUCCESS",
+                details=f"New student created. Student ID: {new_student.id}, User ID: {new_user.id}. Created by: {authorized_user.username}"
+            )
 
             return {
                 "message": f"Student created successfully. Student ID: {new_student.id}, User ID: {new_user.id}"
@@ -77,6 +91,19 @@ class StudentService:
             # send the error message to the parser
             readable_error = parse_integrity_error(error_msg)
             logger.error(readable_error)
+
+            # DB Log
+            await create_audit_log(
+                db=db, request=request, level=LogLevel.ERROR.value, user_id=authorized_user.id,
+                action="CREATE STUDENT DB ERROR",
+                details=f"Integrity error: {readable_error}",
+                payload={
+                    "error": readable_error,
+                    "raw_error": error_msg,
+                    "payload_data": student_data.model_dump(mode="json", exclude_none=True, exclude={"user": {"password"}})
+                }
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
 

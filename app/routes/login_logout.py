@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.user_login_logout import login_user, logout_user
@@ -10,23 +10,30 @@ from app.utils.token_injector import inject_token
 router = APIRouter(prefix='/auth', tags=['login'])
 
 
-
 # login route setup with httponly cookies
 @router.post("/login")
 async def login(
-    response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_db_session)):
+        request: Request,
+        response: Response,
+        form_data: OAuth2PasswordRequestForm = Depends(),
+        db: AsyncSession = Depends(get_db_session)):
     try:
-        return await login_user(db, form_data.username, form_data.password, response)
+        return await login_user(db, form_data.username, form_data.password, response, request)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @router.post("/logout")
 async def logout(
-    response: Response
-    ):
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db_session),
+):
     try:
-        return await logout_user(response)
+        return await logout_user(request, response, db)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
