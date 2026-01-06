@@ -1,18 +1,25 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.integrity_error_parser import parse_integrity_error
 from app.models import Department
+from app.models.audit_log_model import LogLevel
 from app.schemas.department_schema import DepartmentCreateSchema, DepartmentOutSchema, DepartmentUpdateSchema
 from sqlalchemy.exc import IntegrityError
+
+from app.schemas.user_schema import UserOutSchema
+from app.services.audit_logging_service import create_audit_log
 
 
 class DepartmentService:
 
     @staticmethod
     async def create_department(
+        department_data: DepartmentCreateSchema,
+        request: Request,
         db: AsyncSession,
-        department_data: DepartmentCreateSchema
+        authorized_user: UserOutSchema
     ):
         lowercase_department_name = department_data.department_name.lower().strip()
 
@@ -35,6 +42,13 @@ class DepartmentService:
             # refresh the object(get the new data)
             await db.refresh(new_department)
 
+            await create_audit_log(
+                db=db, request=request, level=LogLevel.INFO.value,
+                action="CREATE DEPARTMENT SUCCCESS",
+                details=f"New Department created successfully. ID: {new_department.id}",
+                user_id=authorized_user.id
+            )
+
             return {
                 "message": f"New Department created successfully. ID: {new_department.id}"
             }
@@ -45,6 +59,19 @@ class DepartmentService:
 
             # send the error message to the parser
             readable_error = parse_integrity_error(error_msg)
+
+            await create_audit_log(
+                db=db, request=request, level=LogLevel.ERROR.value,
+                action="CREATE DEPARTMENT ERROR",
+                details=f"Error while creating new department: {readable_error}",
+                user_id=authorized_user.id,
+                payload={
+                    "error": readable_error,
+                    "raw_error": error_msg,
+                    "payload_data": department_data.model_dump()
+                }
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
 
@@ -64,9 +91,11 @@ class DepartmentService:
 
     @staticmethod
     async def update_department(
-        db: AsyncSession,
         department_id: int,
-        department_data: DepartmentUpdateSchema
+        department_data: DepartmentUpdateSchema,
+        request: Request,
+        db: AsyncSession,
+        authorized_user: UserOutSchema
     ):
         statement = select(Department).where(Department.id == department_id)
         result = await db.execute(statement)
@@ -84,6 +113,16 @@ class DepartmentService:
             await db.commit()
             await db.refresh(department)
 
+            await create_audit_log(
+                db=db, request=request, level=LogLevel.INFO.value,
+                action="UPDATE DEPARTMENT SUCCCESS",
+                details=f"Department: {department.department_name} updated",
+                user_id=authorized_user.id,
+                payload={
+                    "payload_data": department_data.model_dump()
+                }
+            )
+
             return {
                 "message": f"{department.department_name} department updated successfully. ID: {department.id}"
             }
@@ -94,13 +133,28 @@ class DepartmentService:
 
             # send the error message to the parser
             readable_error = parse_integrity_error(error_msg)
+
+            await create_audit_log(
+                db=db, request=request, level=LogLevel.ERROR.value,
+                action="UPDATE DEPARTMENT ERROR",
+                details=f"Department update failed. Error: {readable_error}",
+                user_id=authorized_user.id,
+                payload={
+                    "error": readable_error,
+                    "raw_error": error_msg,
+                    "payload_data": department_data.model_dump()
+                }
+            )
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
 
     @staticmethod
     async def delete_department(
+        department_id: int,
+        request: Request,
         db: AsyncSession,
-        department_id: int
+        authorized_user: UserOutSchema
     ):
 
         statement = select(Department).where(Department.id == department_id)
@@ -111,7 +165,42 @@ class DepartmentService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
 
-        await db.delete(department)
-        await db.commit()
+        try:
+            await db.delete(department)
+            await db.commit()
 
-        return {"message": f"{department.department_name} department deleted successfully"}
+            logger.success("Department deleted successfully")
+
+            await create_audit_log(
+                db=db, request=request, level=LogLevel.INFO.value,
+                action="DELETE DEPARTMENT SUCCCESS",
+                details=f"Department: {department.department_name}, ID: {department.id} deleted",
+                user_id=authorized_user.id,
+                payload={
+                    "payload_data": department_id
+                }
+            )
+
+            return {"message": f"{department.department_name} department deleted successfully"}
+        except IntegrityError as e:
+            # generally the PostgreSQL's error message will be in e.orig.args[0]
+            error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
+                e)
+
+            # send the error message to the parser
+            readable_error = parse_integrity_error(error_msg)
+
+            await create_audit_log(
+                db=db, request=request, level=LogLevel.ERROR.value,
+                action="DELETE DEPARTMENT ERROR",
+                details=f"Department deletion failed. Error: {readable_error}",
+                user_id=authorized_user.id,
+                payload={
+                    "error": readable_error,
+                    "raw_error": error_msg,
+                    "payload_data": department_id
+                }
+            )
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
