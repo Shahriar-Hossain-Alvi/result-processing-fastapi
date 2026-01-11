@@ -19,7 +19,7 @@ class AuditLog(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    user_id: Mapped[int] = mapped_column(
+    created_by: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), nullable=True)
 
     level: Mapped[str] = mapped_column(
@@ -31,7 +31,7 @@ class AuditLog(Base, TimestampMixin):
             values_callable=lambda x: [e.value for e in x]
         ),
         nullable=False,
-        default=LogLevel.INFO,  # python/sqlalchemy level default
+        default=LogLevel.INFO.value,  # python/sqlalchemy level default
         # DB level default, need the .value (not the Enum name)
         server_default=LogLevel.INFO.value
     )

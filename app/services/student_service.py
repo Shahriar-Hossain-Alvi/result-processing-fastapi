@@ -1,31 +1,29 @@
+from typing import Any
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.exceptions import DomainIntegrityError
 from app.core.integrity_error_parser import parse_integrity_error
 from app.core.pw_hash import hash_password
-from app.models.audit_log_model import LogLevel
 from app.models.department_model import Department
 from app.models.semester_model import Semester
 from app.models.student_model import Student
 from app.models.user_model import User
-from app.permissions.role_checks import ensure_admin
 from app.schemas.student_schema import StudentCreateSchema, StudentUpdateByAdminSchema, StudentUpdateSchema
-from fastapi import HTTPException, Request, status, Depends
+from fastapi import HTTPException, Request, status
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
-from app.schemas.user_schema import UserOutSchema
-from app.services.audit_logging_service import create_audit_log
 from app.utils import check_existence
+from app.utils.mask_sensitive_data import sanitize_payload
 
 
 class StudentService:
 
     @staticmethod
     async def create_student(
-            db: AsyncSession,
-            request: Request,
             student_data: StudentCreateSchema,
-            authorized_user: UserOutSchema = Depends(ensure_admin),
+            db: AsyncSession,
+            request: Request | None = None,
     ):
         # check for existance in user table
         existing_user = await db.scalar(select(User).where(User.username == student_data.user.username))
@@ -60,8 +58,7 @@ class StudentService:
             await db.flush()  # This won't add the user to the database yet but it'll generate a primary key for the user
 
             # create student
-            new_student_info = student_data.model_dump(
-                exclude={"user"})
+            new_student_info = student_data.model_dump(exclude={"user"})
             new_student = Student(
                 **new_student_info,
                 user_id=new_user.id
@@ -72,40 +69,44 @@ class StudentService:
 
             logger.success("New student created successfully")
 
-            # DB Log
-            await create_audit_log(
-                db=db, request=request, level=LogLevel.INFO.value, user_id=authorized_user.id,
-                action="CREATE STUDENT SUCCESS",
-                details=f"New student created. Student ID: {new_student.id}, User ID: {new_user.id}. Created by: {authorized_user.username}"
-            )
-
-            return {
-                "message": f"Student created successfully. Student ID: {new_student.id}, User ID: {new_user.id}"
-            }
+            return new_student
         except IntegrityError as e:
+            # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state to save the Audit Log
+            await db.rollback()
+
+            # generally the PostgreSQL's error message will be in e.orig.args
+            raw_error_message = str(e.orig) if e.orig else str(e)
+            readable_error = parse_integrity_error(raw_error_message)
+
             logger.error(f"Integrity error while creating student: {e}")
-            # generally the PostgreSQL's error message will be in e.orig.args[0]
-            error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
-                e)
+            logger.error(f"Readable Error: {readable_error}")
 
-            # send the error message to the parser
-            readable_error = parse_integrity_error(error_msg)
-            logger.error(readable_error)
-
-            # DB Log
-            await create_audit_log(
-                db=db, request=request, level=LogLevel.ERROR.value, user_id=authorized_user.id,
-                action="CREATE STUDENT DB ERROR",
-                details=f"Integrity error: {readable_error}",
-                payload={
-                    "error": readable_error,
-                    "raw_error": error_msg,
-                    "payload_data": student_data.model_dump(mode="json", exclude_none=True, exclude={"user": {"password"}})
+            # attach audit payload safely
+            if request:
+                payload: dict[str, Any] = {
+                    "raw_error": raw_error_message,
+                    "readable_error": readable_error,
                 }
-            )
 
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
+                if student_data:
+                    safe_data = sanitize_payload(
+                        student_data.model_dump(
+                            mode="json",
+                            exclude={
+                                "user": {
+                                    "password",
+                                    "hashed_password",
+                                }
+                            },
+                        )
+                    )
+                    payload["data"] = safe_data
+
+                request.state.audit_payload = payload
+
+            raise DomainIntegrityError(
+                error_message=readable_error, raw_error=raw_error_message
+            )
 
     @staticmethod
     async def get_students(
@@ -133,11 +134,14 @@ class StudentService:
 
         return student
 
+    # update student by admin
+
     @staticmethod
     async def update_student_by_admin(
-            db: AsyncSession,
             student_id: int,
-            student_update_data: StudentUpdateByAdminSchema
+            student_update_data: StudentUpdateByAdminSchema,
+            db: AsyncSession,
+            request: Request | None = None,
     ):
         # check for existing student
         student = await db.scalar(select(Student).where(Student.id == student_id))
@@ -157,26 +161,45 @@ class StudentService:
             await db.commit()
             await db.refresh(student)
             logger.success("Student updated successfully")
+
             return {
                 "message": f"Student updated successfully. Student ID: {student.id}"
             }
         except IntegrityError as e:
-            logger.error(f"Integrity error while updating student: {e}")
-            # generally the PostgreSQL's error message will be in e.orig.args[0]
-            error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
-                e)
+            # Important: rollback as soon as an error occurs. It recovers 	the 	session from 'failed' state and puts it back in 'clean' state to 	save the Audit Log
+            await db.rollback()
 
-            # send the error message to the parser
-            readable_error = parse_integrity_error(error_msg)
-            logger.error(readable_error)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
+            # generally the PostgreSQL's error message will be in e.orig.args
+            raw_error_message = str(e.orig) if e.orig else str(e)
+            readable_error = parse_integrity_error(raw_error_message)
+
+            logger.error(f"Integrity error while updating student: {e}")
+            logger.error(f"Readable Error: {readable_error}")
+
+            # attach audit payload safely
+            if request:
+                payload: dict[str, Any] = {
+                    "raw_error": raw_error_message,
+                    "readable_error": readable_error,
+                }
+
+                if student_update_data:
+                    payload["data"] = student_update_data.model_dump(
+                        mode="json", exclude_unset=True)
+
+                request.state.audit_payload = payload
+
+            raise DomainIntegrityError(
+                error_message=readable_error, raw_error=raw_error_message
+            )
 
     @staticmethod
+    # update student (self)
     async def update_student(
-            db: AsyncSession,
             student_id: int,
-            student_update_data: StudentUpdateSchema
+            student_update_data: StudentUpdateSchema,
+            db: AsyncSession,
+            request: Request | None = None,
     ):
         # check for existing student
         student = await db.scalar(select(Student).where(Student.id == student_id))
@@ -185,26 +208,83 @@ class StudentService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
-        updated_student_data = student_update_data.model_dump(
-            exclude_unset=True)  # convert to dictionary
+        try:
+            updated_student_data = student_update_data.model_dump(
+                exclude_unset=True)  # convert to dictionary
 
-        for key, value in updated_student_data.items():
-            # apply the updated data in the student object(from DB)
-            setattr(student, key, value)
+            for key, value in updated_student_data.items():
+                # apply the updated data in the student object(from DB)
+                setattr(student, key, value)
 
-        await db.commit()
-        await db.refresh(student)
+            await db.commit()
+            await db.refresh(student)
 
-        return student
+            return {
+                "message": f"Student updated successfully. Student ID: {student.id}"
+            }
+        except IntegrityError as e:
+            # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state to 	save the Audit Log
+            await db.rollback()
+
+            # generally the PostgreSQL's error message will be in e.orig.args
+            raw_error_message = str(e.orig) if e.orig else str(e)
+            readable_error = parse_integrity_error(raw_error_message)
+
+            logger.error(f"Integrity error while updating student(self): {e}")
+            logger.error(f"Readable Error: {readable_error}")
+
+            # attach audit payload safely
+            if request:
+                payload: dict[str, Any] = {
+                    "raw_error": raw_error_message,
+                    "readable_error": readable_error,
+                }
+
+                if student_update_data:
+                    payload["data"] = student_update_data.model_dump(
+                        mode="json", exclude_unset=True)
+
+                request.state.audit_payload = payload
+
+            raise DomainIntegrityError(
+                error_message=readable_error, raw_error=raw_error_message
+            )
 
     @staticmethod
     async def delete_student(
+            student_id: int,
             db: AsyncSession,
-            student_id: int
+            request: Request | None = None
     ):
-        student = await StudentService.get_student(db, student_id)
 
-        await db.delete(student)
-        await db.commit()
+        student = await db.scalar(select(Student).where(Student.id == student_id))
 
-        return {"message": f"{student.name} student deleted successfully"}
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+        try:
+            await db.delete(student)
+            await db.commit()
+
+            return {"message": f"{student.name} student deleted successfully"}
+        except IntegrityError as e:
+            # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state to 	save the Audit Log
+            await db.rollback()
+
+            # generally the PostgreSQL's error message will be in e.orig.args
+            raw_error_message = str(e.orig) if e.orig else str(e)
+            readable_error = parse_integrity_error(raw_error_message)
+
+            logger.error(f"Integrity error while deleting student: {e}")
+            logger.error(f"Readable Error: {readable_error}")
+
+            # attach audit payload safely
+            if request:
+                request.state.audit_payload = {
+                    "raw_error": raw_error_message,
+                    "readable_error": readable_error,
+                }
+            raise DomainIntegrityError(
+                error_message=readable_error, raw_error=raw_error_message
+            )

@@ -3,13 +3,10 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.integrity_error_parser import parse_integrity_error
 from app.models import Semester
-from app.models.audit_log_model import LogLevel
 from app.schemas.semester_schema import SemesterCreateSchema, SemesterUpdateSchema
 from sqlalchemy import select, or_
 from sqlalchemy.exc import IntegrityError
-
 from app.schemas.user_schema import UserOutSchema
-from app.services.audit_logging_service import create_audit_log
 
 
 class SemesterService:
@@ -42,20 +39,21 @@ class SemesterService:
             await db.refresh(new_semester)
             logger.success("New Semester created successfully")
 
-            await create_audit_log(
-                db=db, request=request, level=LogLevel.INFO.value,
-                action="CREATE SEMESTER SUCCCESS",
-                details=f"Semester: {new_semester.semester_name}, ID: {new_semester.id} created",
-                user_id=authorized_user.id,
-                payload={
-                    "payload_data": semester_data.model_dump()
-                }
-            )
+            # await create_audit_log_isolated(
+            #     request=request, level=LogLevel.INFO.value,
+            #     action="CREATE SEMESTER SUCCCESS",
+            #     details=f"Semester: {new_semester.semester_name}, ID: {new_semester.id} created",
+            #     created_by=authorized_user.id,
+            #     payload={
+            #         "payload_data": semester_data.model_dump()
+            #     }
+            # )
 
             return {
                 "message": f"New Semester created successfully. ID: {new_semester.id}"
             }
         except IntegrityError as e:
+            await db.rollback()
             logger.error(f"Integrity error while creating new Semester: {e}")
 
             # generally the PostgreSQL's error message will be in e.orig.args[0]
@@ -67,17 +65,17 @@ class SemesterService:
             logger.error(
                 f"Integrity error while creating new Semester: {readable_error}")
 
-            await create_audit_log(
-                db=db, request=request, level=LogLevel.ERROR.value,
-                action="CREATE SEMESTER ERROR",
-                details=f"Semester creation failed. Error: {readable_error}",
-                user_id=authorized_user.id,
-                payload={
-                    "error": readable_error,
-                    "raw_error": error_msg,
-                    "payload_data": semester_data.model_dump()
-                }
-            )
+            # await create_audit_log_isolated(
+            #     request=request, level=LogLevel.ERROR.value,
+            #     action="CREATE SEMESTER ERROR",
+            #     details=f"Semester creation failed. Error: {readable_error}",
+            #     created_by=getattr(authorized_user, "id", None),
+            #     payload={
+            #         "error": readable_error,
+            #         "raw_error": error_msg,
+            #         "payload_data": semester_data.model_dump()
+            #     }
+            # )
 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
@@ -123,20 +121,21 @@ class SemesterService:
             await db.refresh(semester)
             logger.success("Semester updated successfully")
 
-            await create_audit_log(
-                db=db, request=request, level=LogLevel.INFO.value,
-                action="UPDATE SEMESTER SUCCCESS",
-                details=f"Semester: {semester.semester_name} updated",
-                user_id=authorized_user.id,
-                payload={
-                    "payload_data": semester_update_data.model_dump()
-                }
-            )
+            # await create_audit_log_isolated(
+            #     request=request, level=LogLevel.INFO.value,
+            #     action="UPDATE SEMESTER SUCCCESS",
+            #     details=f"Semester: {semester.semester_name} updated",
+            #     created_by=authorized_user.id,
+            #     payload={
+            #         "payload_data": semester_update_data.model_dump(exclude_unset=True)
+            #     }
+            # )
 
             return {
                 "message": f"Semester updated successfully. ID: {semester.id}"
             }
         except IntegrityError as e:
+            await db.rollback()
             logger.error(f"Integrity error while updating semester: {e}")
             # generally the PostgreSQL's error message will be in e.orig.args[0]
             error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
@@ -147,17 +146,17 @@ class SemesterService:
             logger.error(
                 f"Integrity error while updating semester: {readable_error}")
 
-            await create_audit_log(
-                db=db, request=request, level=LogLevel.ERROR.value,
-                action="UPDATE SEMESTER ERROR",
-                details=f"Semester update failed. Error: {readable_error}",
-                user_id=authorized_user.id,
-                payload={
-                    "error": readable_error,
-                    "raw_error": error_msg,
-                    "payload_data": semester_update_data.model_dump()
-                }
-            )
+            # await create_audit_log_isolated(
+            #     request=request, level=LogLevel.ERROR.value,
+            #     action="UPDATE SEMESTER ERROR",
+            #     details=f"Semester update failed. Error: {readable_error}",
+            #     created_by=getattr(authorized_user, "id", None),
+            #     payload={
+            #         "error": readable_error,
+            #         "raw_error": error_msg,
+            #         "payload_data": semester_update_data.model_dump()
+            #     }
+            # )
 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
@@ -181,18 +180,19 @@ class SemesterService:
             await db.commit()
             logger.success("Semester deleted successfully")
 
-            await create_audit_log(
-                db=db, request=request, level=LogLevel.INFO.value,
-                action="DELETE SEMESTER SUCCCESS",
-                details=f"Semester: {semester.semester_name}, ID: {semester.id} deleted",
-                user_id=authorized_user.id,
-                payload={
-                    "payload_data": semester_id
-                }
-            )
+            # await create_audit_log_isolated(
+            #     request=request, level=LogLevel.INFO.value,
+            #     action="DELETE SEMESTER SUCCCESS",
+            #     details=f"Semester: {semester.semester_name}, ID: {semester.id} deleted",
+            #     created_by=authorized_user.id,
+            #     payload={
+            #         "payload_data": semester_id
+            #     }
+            # )
 
             return {"message": f"{semester.semester_name} semester deleted successfully"}
         except IntegrityError as e:
+            await db.rollback()
             # generally the PostgreSQL's error message will be in e.orig.args[0]
             error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
                 e)
@@ -200,17 +200,17 @@ class SemesterService:
             # send the error message to the parser
             readable_error = parse_integrity_error(error_msg)
 
-            await create_audit_log(
-                db=db, request=request, level=LogLevel.ERROR.value,
-                action="DELETE SEMESTER ERROR",
-                details=f"Semester deletion failed. Error: {readable_error}",
-                user_id=authorized_user.id,
-                payload={
-                    "error": readable_error,
-                    "raw_error": error_msg,
-                    "payload_data": semester_id
-                }
-            )
+            # await create_audit_log_isolated(
+            #     request=request, level=LogLevel.ERROR.value,
+            #     action="DELETE SEMESTER ERROR",
+            #     details=f"Semester deletion failed. Error: {readable_error}",
+            #     created_by=getattr(authorized_user, "id", None),
+            #     payload={
+            #         "error": readable_error,
+            #         "raw_error": error_msg,
+            #         "payload_data": semester_id
+            #     }
+            # )
 
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
