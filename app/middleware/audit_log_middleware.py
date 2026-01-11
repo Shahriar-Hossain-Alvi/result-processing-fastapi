@@ -28,6 +28,13 @@ class AuditMiddleware(BaseHTTPMiddleware):
             and status == 401
         ):
             return response
+        # Skip successful logout
+        if (
+            method == "POST"
+            and request.url.path == "/api/auth/logout"
+            and status == 200
+        ):
+            return response
 
         if status >= 500:
             level = LogLevel.CRITICAL.value
@@ -42,7 +49,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         # action is attached from router before the try block
         action = getattr(
             request.state, "action",
-            f"{request.method} {request.url.path}"
+            f"No action attached or Unexpected Action.  Method: {method} Path: {path}"
         )
 
         log = AuditLog(

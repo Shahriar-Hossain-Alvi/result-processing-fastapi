@@ -18,12 +18,12 @@ async def login(
         response: Response,
         form_data: OAuth2PasswordRequestForm = Depends(),
         db: AsyncSession = Depends(get_db_session)):
-    try:
-        result = await login_user(db, form_data.username, form_data.password, response)
 
-        return {
-            "message": result["message"]
-        }
+    # attach action
+    request.state.action = "LOGIN USER"
+
+    try:
+        return await login_user(db, form_data.username, form_data.password, response, request)
     except DomainIntegrityError as de:
         logger.error(f"Integrity error while login {str(de)}")
         raise HTTPException(
@@ -34,6 +34,13 @@ async def login(
     except Exception as e:
         logger.critical("Unexpected Error: ", e)
         logger.critical("LOGIN FAILED FROM ROUTER")
+        # attach audit payload
+        if request:
+            request.state.audit_payload = {
+                "raw_error": str(e),
+                "exception_type": type(e).__name__,
+            }
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
@@ -42,12 +49,12 @@ async def login(
 async def logout(
     request: Request,
     response: Response,
-    background_tasks: BackgroundTasks,
 ):
+    # attach action
+    request.state.action = "LOGOUT USER"
     try:
         return await logout_user(response)
     except DomainIntegrityError as de:
-
         logger.error(f"Integrity error while login {str(de)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=de.error_message
@@ -56,6 +63,13 @@ async def logout(
         raise
     except Exception as e:
         logger.critical("Unexpected Error: ", e)
+
+        # attach audit payload
+        if request:
+            request.state.audit_payload = {
+                "raw_error": str(e),
+                "exception_type": type(e).__name__,
+            }
 
         logger.critical("LOGIN FAILED FROM ROUTER")
         raise HTTPException(

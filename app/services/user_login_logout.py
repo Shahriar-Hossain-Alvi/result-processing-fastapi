@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from fastapi import HTTPException, status, Response, Request
 from loguru import logger
 from sqlalchemy import select
@@ -8,7 +9,6 @@ from app.core.exceptions import DomainIntegrityError
 from app.core.integrity_error_parser import parse_integrity_error
 from app.models import User
 from app.core import settings
-from app.models.audit_log_model import LogLevel
 from sqlalchemy.exc import IntegrityError
 
 
@@ -17,6 +17,7 @@ async def login_user(
     username: str,
     password: str,
     response: Response,
+    request: Request | None = None
 ):
     # get user
     statement = select(User).where(User.username == username)
@@ -49,23 +50,30 @@ async def login_user(
         )
         logger.success("Login successful")
         return {
-            "message": "Login successful",
-            "user_data": user
+            "message": "Login successful"
         }
 
     except IntegrityError as e:
+        # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state to save the Audit Log
         await db.rollback()
-        # generally the PostgreSQL's error message will be in e.orig.args[0]
-        error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
-            e)
-        # send the error message to the parser
-        readable_error = parse_integrity_error(error_msg)
+
+        # generally the PostgreSQL's error message will be in e.orig.args
+        raw_error_message = str(e.orig) if e.orig else str(e)
+        readable_error = parse_integrity_error(raw_error_message)
 
         logger.error(f"Error occurred while login: {e}")
         logger.error(f"Readable Error: {readable_error}")
 
+        # attach audit payload safely
+        if request:
+            payload: dict[str, Any] = {
+                "raw_error": raw_error_message,
+                "readable_error": readable_error,
+            }
+            request.state.audit_payload = payload
+
         raise DomainIntegrityError(
-            error_message=readable_error, raw_error=error_msg)
+            error_message=readable_error, raw_error=raw_error_message)
 
 
 async def logout_user(response: Response):
