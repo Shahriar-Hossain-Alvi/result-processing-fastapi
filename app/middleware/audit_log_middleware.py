@@ -16,9 +16,17 @@ class AuditMiddleware(BaseHTTPMiddleware):
         # Audit Logging
         method = request.method
         status = response.status_code
+        path = request.url.path
 
         # SKIP successful GET requests
         if method == "GET" and status < 400:
+            return response
+        # Skip expected auth checks
+        if (
+            method == "GET"
+            and request.url.path == "/api/users/me"
+            and status == 401
+        ):
             return response
 
         if status >= 500:
@@ -41,7 +49,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
             created_by=user_id,
             level=level,
             action=action,
-            path=request.url.path,
+            path=path,
             method=method,
             details=f"Log created by this users(USER ID:{user_id}) request in {method} method in Action: {action}. Status Code: {status}",
             ip_address=request.client.host if request.client else None,

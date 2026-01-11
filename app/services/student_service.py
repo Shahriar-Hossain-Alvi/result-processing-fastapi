@@ -1,3 +1,4 @@
+from typing import Any
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from fastapi import HTTPException, Request, status
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from app.utils import check_existence
+from app.utils.mask_sensitive_data import sanitize_payload
 
 
 class StudentService:
@@ -81,10 +83,26 @@ class StudentService:
 
             # attach audit payload safely
             if request:
-                request.state.audit_payload = {
+                payload: dict[str, Any] = {
                     "raw_error": raw_error_message,
                     "readable_error": readable_error,
                 }
+
+                if student_data:
+                    safe_data = sanitize_payload(
+                        student_data.model_dump(
+                            mode="json",
+                            exclude={
+                                "user": {
+                                    "password",
+                                    "hashed_password",
+                                }
+                            },
+                        )
+                    )
+                    payload["data"] = safe_data
+
+                request.state.audit_payload = payload
 
             raise DomainIntegrityError(
                 error_message=readable_error, raw_error=raw_error_message
@@ -160,10 +178,16 @@ class StudentService:
 
             # attach audit payload safely
             if request:
-                request.state.audit_payload = {
+                payload: dict[str, Any] = {
                     "raw_error": raw_error_message,
                     "readable_error": readable_error,
                 }
+
+                if student_update_data:
+                    payload["data"] = student_update_data.model_dump(
+                        mode="json", exclude_unset=True)
+
+                request.state.audit_payload = payload
 
             raise DomainIntegrityError(
                 error_message=readable_error, raw_error=raw_error_message
@@ -211,10 +235,16 @@ class StudentService:
 
             # attach audit payload safely
             if request:
-                request.state.audit_payload = {
+                payload: dict[str, Any] = {
                     "raw_error": raw_error_message,
                     "readable_error": readable_error,
                 }
+
+                if student_update_data:
+                    payload["data"] = student_update_data.model_dump(
+                        mode="json", exclude_unset=True)
+
+                request.state.audit_payload = payload
 
             raise DomainIntegrityError(
                 error_message=readable_error, raw_error=raw_error_message
