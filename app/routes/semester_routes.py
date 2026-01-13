@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import DomainIntegrityError
-from app.permissions.role_checks import ensure_admin, ensure_super_admin
+from app.permissions import ensure_roles
 from app.services.semester_service import SemesterService
 from app.db.db import get_db_session
 from app.schemas.semester_schema import SemesterCreateSchema, SemesterOutSchema, SemesterUpdateSchema
@@ -22,7 +22,8 @@ async def add__new_semester(
     semester_data: SemesterCreateSchema,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-    authorized_user: UserOutSchema = Depends(ensure_admin),
+    authorized_user: UserOutSchema = Depends(
+        ensure_roles(["super_admin", "admin"])),
 ):
     # attach action
     request.state.action = "CREATE SEMESTER"
@@ -78,7 +79,8 @@ async def update_single_semester(
     semester_data: SemesterUpdateSchema,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-    authorized_user: UserOutSchema = Depends(ensure_admin),
+    authorized_user: UserOutSchema = Depends(
+        ensure_roles(["super_admin", "admin"])),
 ):
     # attach action
     request.state.action = "UPDATE SEMESTER"
@@ -109,7 +111,7 @@ async def delete_single_semester(
     id: int,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-    authorized_user: UserOutSchema = Depends(ensure_super_admin),
+    authorized_user: UserOutSchema = Depends(ensure_roles(["super_admin"])),
 ):
     # attach action
     request.state.action = "DELETE SEMESTER"

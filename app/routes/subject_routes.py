@@ -3,7 +3,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.authenticated_user import get_current_user
 from app.core.exceptions import DomainIntegrityError
-from app.permissions.role_checks import ensure_admin, ensure_admin_or_teacher, ensure_super_admin
+from app.permissions import ensure_roles
 from app.services.subject_service import SubjectService
 from app.db.db import get_db_session
 from app.schemas.subject_schema import SubjectCreateSchema, SubjectOutSchema
@@ -21,7 +21,8 @@ async def create_new_subject(
     subject_data: SubjectCreateSchema,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-    authorized_user: UserOutSchema = Depends(ensure_admin),
+    authorized_user: UserOutSchema = Depends(
+        ensure_roles(["super_admin", "admin"]))
 ):
     # attach action
     request.state.action = "CREATE SUBJECT"
@@ -107,7 +108,7 @@ async def delete_single_subject(
     id: int,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-    authorized_user: UserOutSchema = Depends(ensure_super_admin)
+    authorized_user: UserOutSchema = Depends(ensure_roles(["super_admin"]))
 ):
     # attach action
     request.state.action = "DELETE SUBJECT"

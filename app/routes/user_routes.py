@@ -3,7 +3,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import get_current_user
 from app.core.exceptions import DomainIntegrityError
-from app.permissions.role_checks import ensure_admin, ensure_super_admin
+from app.permissions import ensure_roles
 from app.services.user_service import UserService
 from app.db.db import get_db_session
 from app.schemas.user_schema import AllUsersWithDetailsResponseSchema, UserCreateSchema, UserOutSchema, UserUpdateSchemaByAdmin, UserPasswordUpdateSchema
@@ -21,7 +21,8 @@ async def register_user(
     user_data: UserCreateSchema,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-    authorized_user: UserOutSchema = Depends(ensure_admin),
+    authorized_user: UserOutSchema = Depends(
+        ensure_roles(["super_admin", "admin"]))
 ):
     # attach action
     request.state.action = "CREATE USER BY ADMIN"
@@ -61,7 +62,7 @@ async def get_all_users(
     user_role: str | None = None,
     db: AsyncSession = Depends(get_db_session),
     authorized_user: UserOutSchema = Depends(
-        ensure_admin)
+        ensure_roles(["super_admin", "admin"]))
 ):
     try:
         users = await UserService.get_users(db, user_role)
@@ -75,7 +76,8 @@ async def get_all_users(
 @router.get("/{id}", response_model=AllUsersWithDetailsResponseSchema)
 async def get_single_user(
     id: int,
-    authorized_user: UserOutSchema = Depends(ensure_admin),
+    authorized_user: UserOutSchema = Depends(
+        ensure_roles(["super_admin", "admin"])),
     db: AsyncSession = Depends(get_db_session)
 ):
     try:
@@ -94,7 +96,8 @@ async def update_single_user_by_admin(
     user_data: UserUpdateSchemaByAdmin,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-    authorized_user: UserOutSchema = Depends(ensure_admin),
+    authorized_user: UserOutSchema = Depends(
+        ensure_roles(["super_admin", "admin"]))
 ):
     # attach action
     request.state.action = "UPDATE USER BY ADMIN"
@@ -163,7 +166,7 @@ async def delete_a_user(
     id: int,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-    authorized_user: UserOutSchema = Depends(ensure_super_admin),
+    authorized_user: UserOutSchema = Depends(ensure_roles(["super_admin"]))
 ):
     # attach action
     request.state.action = "DELETE USER"
