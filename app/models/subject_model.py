@@ -1,6 +1,6 @@
 from app.db.base import Base
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import Integer, String, Float, ForeignKey
+from sqlalchemy import Integer, String, Float, ForeignKey, Boolean
 from app.models.timestamp import TimestampMixin
 
 
@@ -16,20 +16,23 @@ class Subject(Base, TimestampMixin):
 
     credits: Mapped[Float] = mapped_column(Float, nullable=False)
 
+    # flag to check if it is a general subject or not eg: English, Economics
+    is_general: Mapped[bool] = mapped_column(Boolean, default=False)
+
     # relationship with semester
     semester_id: Mapped[int] = mapped_column(Integer, ForeignKey(
         "semesters.id", ondelete="SET NULL"))  # set null if semester is deleted
 
     # one subject belongs to one semester
-    semester: Mapped["Semester"] = relationship(
-        back_populates="subjects")  # type: ignore
+    semester: Mapped["Semester"] = relationship(  # type: ignore
+        back_populates="subjects")
 
     # relationship with marks
     # one subject can have many marks
-    marks: Mapped["Mark"] = relationship(
-        back_populates="subject")  # type: ignore
+    marks: Mapped["Mark"] = relationship(  # type: ignore
+        back_populates="subject")
 
     # relationship with subject_offerings
     # many subject can belong to many departments
-    subject_offerings: Mapped[list["SubjectOfferings"]] = relationship(
-        back_populates="subject")  # type: ignore
+    subject_offerings: Mapped[list["SubjectOfferings"]] = relationship(  # type: ignore
+        back_populates="subject")

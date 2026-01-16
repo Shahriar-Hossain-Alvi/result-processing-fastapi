@@ -28,6 +28,10 @@ class Teacher(Base, TimestampMixin):
     user: Mapped["User"] = relationship(  # type: ignore
         back_populates="teacher")
 
+    # relationship with subject offerings
+    subject_offerings: Mapped[list["SubjectOfferings"]] = relationship(  # type: ignore
+        back_populates="taught_by")
+
     # Teachers personal information
     present_address: Mapped[str] = mapped_column(
         String(200), nullable=False, default="")

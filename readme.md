@@ -81,7 +81,7 @@ alembic upgrade head
 ```
 
 ### 3️⃣ Apply migrations inside Docker (dev container):
-- Generate Migrations inside Docker container (if local migration fails):
+- Generate Migrations inside Docker container (if local migration fails or directly use migration using docker container):
 ```
 docker exec -it edutrack_backend_dev alembic revision --autogenerate -m "message"  
 ```
