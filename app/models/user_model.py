@@ -60,7 +60,3 @@ class User(Base, TimestampMixin):
 
     teacher: Mapped["Teacher"] = relationship(  # type: ignore
         back_populates="user", uselist=False)  # for 1-1
-
-    # relationship with subject offerings
-    subject_offerings: Mapped[list["SubjectOfferings"]] = relationship(  # type: ignore
-        back_populates="taught_by")

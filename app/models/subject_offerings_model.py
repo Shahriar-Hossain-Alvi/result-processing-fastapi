@@ -9,13 +9,11 @@ class SubjectOfferings(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    # TODO: use teacher_id from teachers table
-
-    # relationship with user(teacher)
+    # relationship with teacher
     taught_by_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL"))
+        Integer, ForeignKey("teachers.id", ondelete="SET NULL"))
 
-    taught_by: Mapped["User"] = relationship(  # type: ignore
+    taught_by: Mapped["Teacher"] = relationship(  # type: ignore
         back_populates="subject_offerings")
 
     # relationship with subject

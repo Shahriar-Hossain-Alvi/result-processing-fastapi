@@ -45,6 +45,21 @@ class SubjectOfferingService:
         # if not subject:
         #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
 
+        """
+        # Pseudo-code logic for validation
+        existing_count = await db.scalar(
+            select(func.count(SubjectOfferings.id))
+            .join(Subject)
+            .where(
+                SubjectOfferings.department_id == current_dept_id,
+                Subject.semester_id == current_semester_id
+            )
+        )
+
+        if existing_count >= 7:
+            raise HTTPException(detail="This department already has 7 subjects in this semester.")
+        """
+
         try:
             offered_subject = SubjectOfferings(
                 **sub_off_data.model_dump()
