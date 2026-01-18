@@ -1,7 +1,7 @@
 from typing import Any
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import asc, desc, select, or_
 from app.core.exceptions import DomainIntegrityError
 from app.core.integrity_error_parser import parse_integrity_error
 from app.models import User
@@ -92,7 +92,8 @@ class UserService:
     async def get_users(
         db: AsyncSession,
         user_role: str | None = None,
-        department_search: str | None = None
+        department_search: str | None = None,
+        order_by_filter: str | None = None
     ):
         query = (
             select(User)
@@ -104,7 +105,7 @@ class UserService:
                 selectinload(User.student).selectinload(Student.department),
                 selectinload(User.student).selectinload(Student.semester),
             )
-        ).order_by(User.id)
+        )
 
         if user_role:
             query = query.where(User.role == user_role)
@@ -118,6 +119,12 @@ class UserService:
                         Department.department_name.ilike(f"%{department_search}%"))),
                 )
             )
+
+        if order_by_filter == "asc":
+            query = query.order_by(asc(User.id))
+
+        if order_by_filter == "desc":
+            query = query.order_by(desc(User.id))
 
         result = await db.execute(query)
         all_users = result.scalars().unique().all()  # unique
