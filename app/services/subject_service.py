@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, asc, desc, select, or_
 from app.core.exceptions import DomainIntegrityError
 from app.core.integrity_error_parser import parse_integrity_error
+from app.models.semester_model import Semester
 from app.models.subject_model import Subject
 from app.models.subject_offerings_model import SubjectOfferings
 from app.schemas.subject_schema import SubjectCreateSchema, SubjectUpdateSchema
@@ -108,7 +109,9 @@ class SubjectService:
             query = query.where(
                 or_(
                     Subject.subject_title.ilike(search_filter),
-                    Subject.subject_code.ilike(search_filter)
+                    Subject.subject_code.ilike(search_filter),
+                    Subject.semester.has(
+                        Semester.semester_name.ilike(search_filter)),
                 )
             )
 
