@@ -1,6 +1,7 @@
+import time
 from typing import Any
 from loguru import logger
-from sqlalchemy import and_, select
+from sqlalchemy import and_, asc, desc, func, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import DomainIntegrityError
@@ -48,9 +49,14 @@ class SubjectOfferingService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Same subject offering already exists with this Teacher, Department and Subject.")
 
-        # FIXME: implement this
-        """
-        # Pseudo-code logic for validation
+        # One semester can have maximum 7 subjects in a department
+        current_semester_id = await db.scalar(select(Subject.semester_id).where(Subject.id == sub_off_data.subject_id))
+        current_dept_id = await db.scalar(select(Department.id).where(Department.id == sub_off_data.department_id))
+
+        if not current_semester_id or not current_dept_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid subject or department")
+
         existing_count = await db.scalar(
             select(func.count(SubjectOfferings.id))
             .join(Subject)
@@ -60,10 +66,10 @@ class SubjectOfferingService:
             )
         )
 
-        if existing_count >= 7:
+        if existing_count is not None and existing_count >= 7:
             raise HTTPException(
-                detail="This department already has 7 subjects in this semester.")
-        """
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This department already has 7 subjects in this semester. Cannot add more.")
 
         try:
             offered_subject = SubjectOfferings(
@@ -122,16 +128,41 @@ class SubjectOfferingService:
     # get all subject offerings
 
     @staticmethod
-    async def get_subject_offerings(db: AsyncSession):
-        try:
-            query = select(SubjectOfferings).options(
-                selectinload(SubjectOfferings.department),
-                selectinload(SubjectOfferings.subject).selectinload(
-                    Subject.semester),
-                selectinload(SubjectOfferings.taught_by).selectinload(
-                    Teacher.department)
+    async def get_subject_offerings(
+        db: AsyncSession,
+        order_by_filter: str | None = None,
+        filter_by_department: int | None = None,
+        search: str | None = None
+    ):
+        query = select(SubjectOfferings).options(
+            selectinload(SubjectOfferings.department),
+            selectinload(SubjectOfferings.subject).selectinload(
+                Subject.semester),
+            selectinload(SubjectOfferings.taught_by).selectinload(
+                Teacher.department)
+        )
+
+        if order_by_filter == "asc":
+            query = query.order_by(asc(SubjectOfferings.id))
+
+        if order_by_filter == "desc":
+            query = query.order_by(desc(SubjectOfferings.id))
+
+        if filter_by_department is not None:
+            query = query.where(
+                SubjectOfferings.department_id == filter_by_department)
+
+            # Search by subject title or code
+        if search:
+            search_filter = f"%{search}%"
+            query = query.where(
+                or_(
+                    SubjectOfferings.taught_by.has(
+                        Teacher.name.ilike(search_filter))
+                )
             )
 
+        try:
             result = await db.execute(query)
             subject_offerings = result.scalars().unique().all()
 
@@ -155,7 +186,12 @@ class SubjectOfferingService:
     # update subject offering
 
     @staticmethod
-    async def update_subject_offering(db: AsyncSession, update_data: SubjectOfferingUpdateSchema, subject_offering_id: int):
+    async def update_subject_offering(
+        subject_offering_id: int,
+        update_data: SubjectOfferingUpdateSchema,
+        db: AsyncSession,
+        request: Request | None = None
+    ):
 
         # check for existing subject offering
         subject_offering = await db.scalar(select(SubjectOfferings).where(SubjectOfferings.id == subject_offering_id))
@@ -167,7 +203,7 @@ class SubjectOfferingService:
         updated_data = update_data.model_dump(exclude_unset=True)
 
         # check if taught_by exists
-        if "taught_by_id" in updated_data:
+        if "taught_by_id" in updated_data and updated_data["taught_by_id"] is not None:
             await check_existence(Teacher, db, updated_data["taught_by_id"], "Teacher")
 
         # check if department exists
@@ -188,15 +224,35 @@ class SubjectOfferingService:
 
             return subject_offering
         except IntegrityError as e:
-            # FIXME: add the fixed code here
-            # generally the PostgreSQL's error message will be in e.orig.args[0]
-            error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
-                e)
+            # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state
+            await db.rollback()
 
-            # send the error message to the parser
-            readable_error = parse_integrity_error(error_msg)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=readable_error)
+            # generally the PostgreSQL's error message will be in e.orig.args
+            raw_error_message = str(e.orig) if e.orig else str(e)
+            readable_error = parse_integrity_error(raw_error_message)
+
+            logger.error(
+                f"Integrity error while updating subject offering: {e}")
+            logger.error(f"Readable Error: {readable_error}")
+
+            # attach audit payload safely
+            if request:
+                payload: dict[str, Any] = {
+                    "raw_error": raw_error_message,
+                    "readable_error": readable_error,
+                }
+
+                if update_data:
+                    payload["data"] = update_data.model_dump(
+                        mode="json",
+                        exclude_unset=True,
+                    )
+
+                request.state.audit_payload = payload
+
+            raise DomainIntegrityError(
+                error_message=readable_error, raw_error=raw_error_message
+            )
 
     @staticmethod
     async def delete_subject_offering(

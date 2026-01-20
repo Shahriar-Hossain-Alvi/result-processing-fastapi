@@ -54,12 +54,15 @@ async def create_new_subject_offering(
             )
 async def get_all_subject_offerings(
     request: Request,
+    order_by_filter: str | None = None,
+    filter_by_department: int | None = None,
+    search: str | None = None,
     authorized_user: UserOutSchema = Depends(
         ensure_roles(["super_admin", "admin"])),
     db: AsyncSession = Depends(get_db_session)
 ):
     try:
-        return await SubjectOfferingService.get_subject_offerings(db)
+        return await SubjectOfferingService.get_subject_offerings(db, order_by_filter, filter_by_department, search)
     except DomainIntegrityError as de:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -68,7 +71,7 @@ async def get_all_subject_offerings(
     except HTTPException:
         raise
     except Exception as e:
-        logger.critical(f"Create subject offering unexpected Error: {e}")
+        logger.critical(f"Get subject offering unexpected Error: {e}")
 
         # attach audit payload
         if request:
@@ -118,20 +121,36 @@ async def get_single_subject_offering(
 
 @router.patch("/{subject_offering_id}")
 async def update_a_subject_offering(
+    request: Request,
     subject_offering_id: int,
     update_data: SubjectOfferingUpdateSchema,
     authorized_user: UserOutSchema = Depends(
         ensure_roles(["super_admin", "admin"])),
     db: AsyncSession = Depends(get_db_session)
 ):
-    # FIXME: add the state and route fix code here
+    # attach action
+    request.state.action = "UPDATE SUBJECT OFFERING "
     try:
-        return await SubjectOfferingService.update_subject_offering(db, update_data, subject_offering_id)
+        return await SubjectOfferingService.update_subject_offering(subject_offering_id, update_data, db, request)
+    except DomainIntegrityError as de:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=de.error_message
+        )
     except HTTPException:
         raise
     except Exception as e:
+        logger.critical(f"Update subject offering unexpected Error: {e}")
+
+        # attach audit payload
+        if request:
+            request.state.audit_payload = {
+                "raw_error": str(e),
+                "exception_type": type(e).__name__,
+            }
+
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
 @router.delete("/{subject_offering_id}")
