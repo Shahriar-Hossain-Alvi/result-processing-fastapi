@@ -8,7 +8,6 @@ from app.schemas.subject_offering_schema import AllSubjectOfferingsResponseSchem
 from app.schemas.subject_schema import MinimalSemesterResponseSchema
 from app.schemas.user_schema import UserOutSchema
 from app.services.subject_offering_service import SubjectOfferingService
-from app.utils.token_injector import inject_token
 
 
 router = APIRouter(
@@ -21,7 +20,6 @@ router = APIRouter(
 async def create_new_subject_offering(
     request: Request,
     sub_off_data: SubjectOfferingCreateSchema,
-    # token_injection: None = Depends(inject_token),
     authorized_user: UserOutSchema = Depends(
         ensure_roles(["super_admin", "admin"])),
     db: AsyncSession = Depends(get_db_session),
@@ -105,7 +103,6 @@ async def get_offered_subjects_for_marking(
 @router.get("/{subject_offering_id}")
 async def get_single_subject_offering(
     subject_offering_id: int,
-    # token_injection: None = Depends(inject_token),
     authorized_user: UserOutSchema = Depends(
         ensure_roles(["super_admin", "admin", "teacher"])),
     db: AsyncSession = Depends(get_db_session),
@@ -123,11 +120,11 @@ async def get_single_subject_offering(
 async def update_a_subject_offering(
     subject_offering_id: int,
     update_data: SubjectOfferingUpdateSchema,
-    # token_injection: None = Depends(inject_token),
     authorized_user: UserOutSchema = Depends(
         ensure_roles(["super_admin", "admin"])),
     db: AsyncSession = Depends(get_db_session)
 ):
+    # FIXME: add the state and route fix code here
     try:
         return await SubjectOfferingService.update_subject_offering(db, update_data, subject_offering_id)
     except HTTPException:

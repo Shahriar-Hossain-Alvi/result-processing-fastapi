@@ -27,28 +27,28 @@ class SubjectOfferingService:
         request: Request | None = None
     ):
         # validate teacher id and role
-        teacher = await check_existence(Teacher, db, sub_off_data.taught_by_id, "Teacher")
-
-        # if teacher.role.value != "teacher":
-        #     raise HTTPException(
-        #         status_code=status.HTTP_400_BAD_REQUEST, detail="Not a teacher")
+        await check_existence(Teacher, db, sub_off_data.taught_by_id, "Teacher")
 
         # validate department id
         await check_existence(Department, db, sub_off_data.department_id, "Department")
 
-        # department = await db.scalar(select(Department).where(Department.id == sub_off_data.department_id))
-
-        # if not department:
-        # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
-
         # validate subject id
         await check_existence(Subject, db, sub_off_data.subject_id, "Subject")
 
-        # subject = await db.scalar(select(Subject).where(Subject.id == sub_off_data.subject_id))
+        #  check if same subject offering exists
+        is_exists = await db.scalar(select(SubjectOfferings).where(
+            and_(
+                SubjectOfferings.department_id == sub_off_data.department_id,
+                SubjectOfferings.subject_id == sub_off_data.subject_id,
+                SubjectOfferings.subject_id == sub_off_data.subject_id
+            )
+        ))
 
-        # if not subject:
-        #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found")
+        if is_exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Same subject offering already exists with this Teacher, Department and Subject.")
 
+        # FIXME: implement this
         """
         # Pseudo-code logic for validation
         existing_count = await db.scalar(
@@ -168,7 +168,7 @@ class SubjectOfferingService:
 
         # check if taught_by exists
         if "taught_by_id" in updated_data:
-            await check_existence(User, db, updated_data["taught_by_id"], "Teacher")
+            await check_existence(Teacher, db, updated_data["taught_by_id"], "Teacher")
 
         # check if department exists
         if "department_id" in updated_data:
@@ -188,6 +188,7 @@ class SubjectOfferingService:
 
             return subject_offering
         except IntegrityError as e:
+            # FIXME: add the fixed code here
             # generally the PostgreSQL's error message will be in e.orig.args[0]
             error_msg = str(e.orig.args[0]) if e.orig.args else str(  # type: ignore
                 e)

@@ -113,7 +113,6 @@ async def get_all_teachers_with_minimal_data(
 # async def get_single_teacher(
 #     id: int,
 #     db: AsyncSession = Depends(get_db_session),
-#     # token_injection: None = Depends(inject_token),
 #     current_user: UserOutSchema = Depends(get_current_user),
 # ):
 
