@@ -27,33 +27,35 @@ class StudentBaseSchema(BaseModel):
         return v
 
 
+# used in create_student_record router function
 class StudentCreateSchema(StudentBaseSchema):
     user: UserCreateSchema
 
+# This is unused. Might not needed
+# class StudentOutSchema(StudentBaseSchema):
+#     id: int
+#     created_at: datetime
+#     updated_at: datetime
+#     model_config = ConfigDict(from_attributes=True)
 
-class StudentOutSchema(StudentBaseSchema):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    model_config = ConfigDict(from_attributes=True)
+# TODO: create studet profile and use this schema to get students data
+# class StudentResponseSchemaNested(StudentBaseSchema):
+#     id: int
+#     created_at: datetime
+#     updated_at: datetime
+#     user: UserOutSchema
+#     model_config = ConfigDict(from_attributes=True)
+
+# TODO: create studet profile to update users these data by self
+# class StudentUpdateSchema(BaseModel):
+#     name: str | None = None
+#     present_address: str | None = None
+#     permanent_address: str | None = None
+#     date_of_birth: date | None = None
+#     photo_url: str | None = None
 
 
-class StudentResponseSchemaNested(StudentBaseSchema):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    user: UserOutSchema
-    model_config = ConfigDict(from_attributes=True)
-
-
-class StudentUpdateSchema(BaseModel):
-    name: str | None = None
-    present_address: str | None = None
-    permanent_address: str | None = None
-    date_of_birth: date | None = None
-    photo_url: str | None = None
-
-
+# used in update_single_student_by_admin router function
 _Partial_Student = create_partial_model(StudentBaseSchema)
 
 

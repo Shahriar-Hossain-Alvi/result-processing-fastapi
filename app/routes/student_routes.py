@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.authenticated_user import get_current_user
 from app.core.exceptions import DomainIntegrityError
 from app.services.student_service import StudentService
 from app.db.db import get_db_session
 from app.permissions import ensure_roles
-from app.schemas.student_schema import StudentCreateSchema, StudentResponseSchemaNested, StudentUpdateByAdminSchema, StudentUpdateSchema
+from app.schemas.student_schema import StudentCreateSchema, StudentUpdateByAdminSchema
 from app.schemas.user_schema import UserOutSchema
 
 router = APIRouter(

@@ -8,7 +8,7 @@ from app.core.pw_hash import hash_password
 from app.models.user_model import User
 from app.models.teacher_model import Teacher
 from app.models.department_model import Department
-from app.schemas.teacher_schema import TeacherCreateSchema, TeacherUpdateByAdminSchema, TeacherUpdateSchema
+from app.schemas.teacher_schema import TeacherCreateSchema, TeacherUpdateByAdminSchema
 from app.utils import check_existence
 from fastapi import HTTPException, Request, status
 from sqlalchemy.orm import selectinload
@@ -19,7 +19,7 @@ from app.utils.mask_sensitive_data import sanitize_payload
 
 class TeacherService:
 
-    @staticmethod
+    @staticmethod  # create teacher
     async def create_teacher(
         teacher_data: TeacherCreateSchema,
         db: AsyncSession,
@@ -105,37 +105,37 @@ class TeacherService:
                 error_message=readable_error, raw_error=raw_error_message
             )
 
-    @staticmethod
-    async def get_teachers(db: AsyncSession):
-        teachers = await db.scalars(select(Teacher))
-        return teachers.all()
+    # @staticmethod # get all teachers
+    # async def get_teachers(db: AsyncSession):
+    #     teachers = await db.scalars(select(Teacher))
+    #     return teachers.all()
 
-    @staticmethod
-    async def get_teacher(db: AsyncSession, teacher_id: int):
-        teacher = await db.scalar(select(Teacher).where(Teacher.id == teacher_id))
+    # @staticmethod # get single teacher
+    # async def get_teacher(db: AsyncSession, teacher_id: int):
+    #     teacher = await db.scalar(select(Teacher).where(Teacher.id == teacher_id))
 
-        if not teacher:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
+    #     if not teacher:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
 
-        return teacher
+    #     return teacher
 
-    @staticmethod
-    async def grouped_teachers_by_department(
-        db: AsyncSession
-    ):
-        all_teachers = await db.scalars(
-            select(Department)
-            .options(
-                selectinload(
-                    Department.teachers
-                )
-            ).order_by(Department.department_name)
-        )
+    # @staticmethod # group teachers by department
+    # async def grouped_teachers_by_department(
+    #     db: AsyncSession
+    # ):
+    #     all_teachers = await db.scalars(
+    #         select(Department)
+    #         .options(
+    #             selectinload(
+    #                 Department.teachers
+    #             )
+    #         ).order_by(Department.department_name)
+    #     )
 
-        result = all_teachers.all()
+    #     result = all_teachers.all()
 
-        return result
+    #     return result
 
     # Get all teacher with minimal data for course allocation (Subject Offering)
     @staticmethod
@@ -257,98 +257,98 @@ class TeacherService:
 
     # update teacher (self)
 
-    @staticmethod
-    async def update_teacher(
-        teacher_id: int,
-        teacher_update_data: TeacherUpdateSchema,
-        db: AsyncSession,
-        request: Request | None = None
-    ):
-        # check for teachers existence
-        teacher = await check_existence(Teacher, db, teacher_id, "Teacher")
-        if not teacher:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
-        # TODO: When a teacher is updating their profile picture, delete the old one from Cloudinary using the photo public_id
-        try:
-            updated_teacher_data = teacher_update_data.model_dump(
-                exclude_unset=True)
+    # @staticmethod # update teachers data by self
+    # async def update_teacher(
+    #     teacher_id: int,
+    #     teacher_update_data: TeacherUpdateSchema,
+    #     db: AsyncSession,
+    #     request: Request | None = None
+    # ):
+    #     # check for teachers existence
+    #     teacher = await check_existence(Teacher, db, teacher_id, "Teacher")
+    #     if not teacher:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
+    #     # TODO: When a teacher is updating their profile picture, delete the old one from Cloudinary using the photo public_id or don't let them update their profile picture
+    #     try:
+    #         updated_teacher_data = teacher_update_data.model_dump(
+    #             exclude_unset=True)
 
-            for key, value in updated_teacher_data.items():
-                setattr(teacher, key, value)
+    #         for key, value in updated_teacher_data.items():
+    #             setattr(teacher, key, value)
 
-            await db.commit()
-            await db.refresh(teacher)
+    #         await db.commit()
+    #         await db.refresh(teacher)
 
-            return teacher
-        except IntegrityError as e:
-            # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state to save the Audit Log
-            await db.rollback()
+    #         return teacher
+    #     except IntegrityError as e:
+    #         # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state to save the Audit Log
+    #         await db.rollback()
 
-            # generally the PostgreSQL's error message will be in e.orig.args
-            raw_error_message = str(e.orig) if e.orig else str(e)
-            readable_error = parse_integrity_error(raw_error_message)
+    #         # generally the PostgreSQL's error message will be in e.orig.args
+    #         raw_error_message = str(e.orig) if e.orig else str(e)
+    #         readable_error = parse_integrity_error(raw_error_message)
 
-            logger.error(f"Integrity error while updating teacher(self): {e}")
-            logger.error(f"Readable Error: {readable_error}")
+    #         logger.error(f"Integrity error while updating teacher(self): {e}")
+    #         logger.error(f"Readable Error: {readable_error}")
 
-            # attach audit payload safely
-            if request:
-                payload: dict[str, Any] = {
-                    "raw_error": raw_error_message,
-                    "readable_error": readable_error,
-                }
+    #         # attach audit payload safely
+    #         if request:
+    #             payload: dict[str, Any] = {
+    #                 "raw_error": raw_error_message,
+    #                 "readable_error": readable_error,
+    #             }
 
-                if teacher_update_data:
-                    payload["data"] = teacher_update_data.model_dump(
-                        mode="json",
-                        exclude_unset=True,
-                    )
+    #             if teacher_update_data:
+    #                 payload["data"] = teacher_update_data.model_dump(
+    #                     mode="json",
+    #                     exclude_unset=True,
+    #                 )
 
-                request.state.audit_payload = payload
+    #             request.state.audit_payload = payload
 
-            raise DomainIntegrityError(
-                error_message=readable_error, raw_error=raw_error_message
-            )
+    #         raise DomainIntegrityError(
+    #             error_message=readable_error, raw_error=raw_error_message
+    #         )
 
-    @staticmethod
-    # Delete Teachre
-    async def delete_teacher(
-        teacher_id: int,
-        db: AsyncSession,
-        request: Request | None = None,
-    ):
-        teacher = await db.scalar(select(Teacher).where(Teacher.id == teacher_id))
+    # @staticmethod # delete teacher by super admin
+    # # Delete Teachre
+    # async def delete_teacher(
+    #     teacher_id: int,
+    #     db: AsyncSession,
+    #     request: Request | None = None,
+    # ):
+    #     teacher = await db.scalar(select(Teacher).where(Teacher.id == teacher_id))
 
-        if not teacher:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
+    #     if not teacher:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found")
 
-        try:
-            await db.delete(teacher)
-            await db.commit()
+    #     try:
+    #         await db.delete(teacher)
+    #         await db.commit()
 
-            return {"message": f"Teacher: {teacher.name} deleted successfully"}
-        except IntegrityError as e:
-            # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state to save the Audit Log
-            await db.rollback()
+    #         return {"message": f"Teacher: {teacher.name} deleted successfully"}
+    #     except IntegrityError as e:
+    #         # Important: rollback as soon as an error occurs. It recovers the session from 'failed' state and puts it back in 'clean' state to save the Audit Log
+    #         await db.rollback()
 
-            # generally the PostgreSQL's error message will be in e.orig.args
-            raw_error_message = str(e.orig) if e.orig else str(e)
-            readable_error = parse_integrity_error(raw_error_message)
+    #         # generally the PostgreSQL's error message will be in e.orig.args
+    #         raw_error_message = str(e.orig) if e.orig else str(e)
+    #         readable_error = parse_integrity_error(raw_error_message)
 
-            logger.error(f"Integrity error while deleting teacher: {e}")
-            logger.error(f"Readable Error: {readable_error}")
+    #         logger.error(f"Integrity error while deleting teacher: {e}")
+    #         logger.error(f"Readable Error: {readable_error}")
 
-            # attach audit payload safely
-            if request:
-                payload: dict[str, Any] = {
-                    "raw_error": raw_error_message,
-                    "readable_error": readable_error,
-                }
+    #         # attach audit payload safely
+    #         if request:
+    #             payload: dict[str, Any] = {
+    #                 "raw_error": raw_error_message,
+    #                 "readable_error": readable_error,
+    #             }
 
-                request.state.audit_payload = payload
+    #             request.state.audit_payload = payload
 
-            raise DomainIntegrityError(
-                error_message=readable_error, raw_error=raw_error_message
-            )
+    #         raise DomainIntegrityError(
+    #             error_message=readable_error, raw_error=raw_error_message
+    #         )
