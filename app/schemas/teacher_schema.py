@@ -15,47 +15,40 @@ class TeacherBaseSchema(BaseModel):
     photo_public_id: str = ""
 
 
+# used in create_teacher_record router function
 class TeacherCreateSchema(TeacherBaseSchema):
     user: UserCreateSchema
 
 
-class TeacherResponseSchema(TeacherBaseSchema):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    user_id: int
-    model_config = ConfigDict(from_attributes=True)
+# currently not needed
+# class TeacherResponseSchema(TeacherBaseSchema):
+#     id: int
+#     created_at: datetime
+#     updated_at: datetime
+#     user_id: int
+#     model_config = ConfigDict(from_attributes=True)
+
+# currently not needed
+# class TeacherResponseSchemaNested(TeacherResponseSchema):
+#     id: int
+#     user: UserOutSchema
+#     model_config = ConfigDict(from_attributes=True)
 
 
+# used in get_all_teachers_with_minimal_data for subject offering
 class DepartmentDataForMinimalTeacher(BaseModel):
     id: int
     department_name: str
     model_config = ConfigDict(from_attributes=True)
 
 
+# used in get_all_teachers_with_minimal_data for subject offering
 class TeacherResponseSchemaForSubjectOffering(BaseModel):
     id: int
     name: str
     department_id: int
     department: DepartmentDataForMinimalTeacher
 
-    model_config = ConfigDict(from_attributes=True)
-    """
-      {
-    "name": "Dr. Ariful Islam",
-    "id": 7,
-    "department_id": 2,
-    "department": {
-      "department_name": "cse – computer science & engineering",
-      "id": 2,
-    }
-  }
-    """
-
-
-class TeacherResponseSchemaNested(TeacherResponseSchema):
-    id: int
-    user: UserOutSchema
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -65,23 +58,26 @@ class TeachersPublicDataResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class TeachersDepartmentWiseGroupResponse(BaseModel):
-    department_name: str
-    teachers: list[TeachersPublicDataResponse]
-    model_config = ConfigDict(from_attributes=True)
+# currently not needed
+# class TeacherUpdateSchema(BaseModel):
+#     name: str | None = None
+#     present_address: str | None = None
+#     permanent_address: str | None = None
+#     date_of_birth: date | None = None
+#     photo_url: str | None = None
 
 
+# TODO: use this in get_all_faculty route in future if needed
+# class TeachersDepartmentWiseGroupResponse(BaseModel):
+#     department_name: str
+#     teachers: list[TeachersPublicDataResponse]
+#     model_config = ConfigDict(from_attributes=True)
+
+
+# used in update_teacher_by_admin router function
 # 1. dynamic partial base beacuse directly using create_partial_model is giving warning in service functions parameter
 _PartialTeacher = create_partial_model(TeacherBaseSchema)
 
 
 class TeacherUpdateByAdminSchema(_PartialTeacher):
     pass
-
-
-class TeacherUpdateSchema(BaseModel):
-    name: str | None = None
-    present_address: str | None = None
-    permanent_address: str | None = None
-    date_of_birth: date | None = None
-    photo_url: str | None = None

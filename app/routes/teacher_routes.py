@@ -5,7 +5,7 @@ from app.core.authenticated_user import get_current_user
 from app.core.exceptions import DomainIntegrityError
 from app.permissions import ensure_roles
 from app.db.db import get_db_session
-from app.schemas.teacher_schema import TeacherCreateSchema, TeacherResponseSchema, TeacherResponseSchemaForSubjectOffering, TeacherUpdateByAdminSchema, TeacherUpdateSchema, TeachersDepartmentWiseGroupResponse
+from app.schemas.teacher_schema import TeacherCreateSchema, TeacherResponseSchemaForSubjectOffering, TeacherUpdateByAdminSchema
 from app.schemas.user_schema import UserOutSchema
 from app.services.teacher_service import TeacherService
 
