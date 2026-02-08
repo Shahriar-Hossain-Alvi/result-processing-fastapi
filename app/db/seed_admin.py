@@ -6,29 +6,30 @@ import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import select
 from sqlalchemy.pool import NullPool
+from app.db.db import AsyncSessionLocal
 
 
 # create engine and database session
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    # This is the critical fix for Transaction Mode
-    connect_args={
-        "prepared_statement_cache_size": 0,
-        "statement_cache_size": 0
-    },
-    # Highly recommended for Supabase/Render to avoid stale connections
-    poolclass=NullPool,
-    echo=True,  # print sql queries
-    future=True,  # enables sqlalchemy 2.0
-)
+# engine = create_async_engine(
+#     settings.DATABASE_URL,
+#     # This is the critical fix for Transaction Mode
+#     connect_args={
+#         "prepared_statement_cache_size": 0,
+#         "statement_cache_size": 0
+#     },
+#     # Highly recommended for Supabase/Render to avoid stale connections
+#     poolclass=NullPool,
+#     echo=True,  # print sql queries
+#     future=True,  # enables sqlalchemy 2.0
+# )
 
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    expire_on_commit=False,
-    # autoflush=False # pending changes are not sent to db (default True), why do we need this?
-    # doesn't commit to db without calling session.commit()/db.commit() , default False
-    autocommit=False
-)
+# AsyncSessionLocal = async_sessionmaker(
+#     engine,
+#     expire_on_commit=False,
+#     # autoflush=False # pending changes are not sent to db (default True), why do we need this?
+#     # doesn't commit to db without calling session.commit()/db.commit() , default False
+#     autocommit=False
+# )
 
 
 async def create_initial_admin():

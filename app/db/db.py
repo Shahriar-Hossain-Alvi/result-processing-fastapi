@@ -24,9 +24,8 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False
 )
 
+
 # dependency for db session
-
-
 async def get_db_session():
     async with AsyncSessionLocal() as session:
         try:
