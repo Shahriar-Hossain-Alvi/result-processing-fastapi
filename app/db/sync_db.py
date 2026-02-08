@@ -5,9 +5,9 @@ from sqlalchemy.pool import NullPool
 
 sync_engine = create_engine(
     settings.SYNC_DATABASE_URL,
-    poolclass=NullPool,  # Essential for Supabase
     echo=False,
-    future=True
+    future=True,
+    poolclass=NullPool  # Essential for Supabase
 )
 
 
