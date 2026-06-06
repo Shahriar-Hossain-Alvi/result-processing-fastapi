@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.exceptions import DomainIntegrityError
 from app.db.db import get_db_session
 from app.permissions import ensure_roles
 from app.schemas.admin_dashboard_schema import AllTablesDataCount, AuditLogsResponseSchema, PieChartResponseSchema
@@ -17,13 +16,12 @@ router = APIRouter(
 # get all tables data count for admin dashboard
 @router.get("/allTableDataCount", response_model=AllTablesDataCount)
 async def get_all_table_data_count_stats(
-    request: Request,
     db: AsyncSession = Depends(get_db_session),
     authorized_user: UserOutSchema = Depends(
         ensure_roles(["super_admin", "admin"])),
 ):
     try:
-        return await AdminDashboardService.get_all_table_data_count(db, request)
+        return await AdminDashboardService.get_all_table_data_count(db)
     except HTTPException:
         raise
     except Exception as e:
@@ -35,13 +33,12 @@ async def get_all_table_data_count_stats(
 # Pie chart for admin dashboard to show the department-wise distribution of teachers and students
 @router.get("/pieChart", response_model=PieChartResponseSchema)
 async def get_chartsData(
-    request: Request,
     db: AsyncSession = Depends(get_db_session),
     authorized_user: UserOutSchema = Depends(
         ensure_roles(["super_admin", "admin"])),
 ):
     try:
-        return await AdminDashboardService.get_chart_data(db, request)
+        return await AdminDashboardService.get_chart_data(db)
     except HTTPException:
         raise
     except Exception as e:
@@ -53,7 +50,6 @@ async def get_chartsData(
 # Audit Log Monitoring
 @router.get("/recentAuditLogs", response_model=list[AuditLogsResponseSchema])
 async def get_recent_audit_logs(
-    request: Request,
     db: AsyncSession = Depends(get_db_session),
     authorized_user: UserOutSchema = Depends(
         ensure_roles(["super_admin", "admin"])),
@@ -66,6 +62,3 @@ async def get_recent_audit_logs(
         logger.critical(f"Unexpected Error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
-
-
-# Filter by Level: শুধুমাত্র CRITICAL বা ERROR লেভেলের লগগুলো আলাদা করে দেখানোর জন্য একটি টগল বা বাটন।
