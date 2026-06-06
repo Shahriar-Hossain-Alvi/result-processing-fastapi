@@ -120,8 +120,7 @@ class AdminDashboardService:
     # get audit log
     @staticmethod
     async def get_recent_audit_logs(
-        db: AsyncSession,
-        request: Request | None = None
+        db: AsyncSession
     ):
         # Get department names with count of students
         query = select(AuditLog).order_by(

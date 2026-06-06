@@ -59,7 +59,7 @@ async def get_recent_audit_logs(
         ensure_roles(["super_admin", "admin"])),
 ):
     try:
-        return await AdminDashboardService.get_recent_audit_logs(db, request)
+        return await AdminDashboardService.get_recent_audit_logs(db)
     except HTTPException:
         raise
     except Exception as e:
