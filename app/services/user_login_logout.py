@@ -187,6 +187,8 @@ async def dummy_user_login(
             dummy_password = settings.DUMMY_TEACHER_PASSWORD
         elif user.role.value == "student" and password == "123456":
             dummy_password = settings.DUMMY_STUDENT_PASSWORD
+        elif user.role.value == "admin" and password == "123456":
+            dummy_password = settings.ADMIN_PASSWORD
 
         # verify password
         is_valid = verify_password(dummy_password, user.hashed_password)
